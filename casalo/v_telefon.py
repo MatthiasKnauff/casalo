@@ -51,6 +51,14 @@ def telefon_einstellungen():
             else:
                 db.ex("INSERT INTO notfallregel (gemeinschaft_id, notfallart, aktion, nummer, ansage) VALUES (?, ?, ?, ?, ?)",
                       (gid, art, aktion, f("nummer"), f("ansage")))
+        elif bereich == "verbindung":
+            fehler = telefon.verbindung_speichern(request.form)
+            for x in fehler:
+                flash(x, "fehler")
+            if fehler:
+                return redirect("/telefon/einstellungen#verbindung")
+            flash("Gespeichert – der Telefon-Container übernimmt die Einstellungen innerhalb einer Minute.", "ok")
+            return redirect("/telefon/einstellungen#verbindung")
         elif bereich == "regel_loeschen":
             db.ex("DELETE FROM notfallregel WHERE id = ?", (f_int("id"),))
         elif bereich == "token":
@@ -66,7 +74,9 @@ def telefon_einstellungen():
                            anonymisieren=db.setting("anonymisieren") == "1",
                            ist_buerozeit=telefon.ist_buerozeit(db.setting("buerozeiten")),
                            gemeinschaften=db.q("SELECT id, name FROM gemeinschaft ORDER BY name"),
-                           NOTFALLARTEN=telefon.NOTFALLARTEN, AKTIONEN=telefon.AKTIONEN)
+                           NOTFALLARTEN=telefon.NOTFALLARTEN, AKTIONEN=telefon.AKTIONEN,
+                           verbindung=telefon.verbindung(), VERBINDUNG=telefon.VERBINDUNG,
+                           status=telefon.status())
 
 
 # ------------------------------------------------------------------ Schnittstelle für den Sprachbot
@@ -135,4 +145,20 @@ def api_ki(aid):
     """Der Sprachbot meldet, was (pseudonymisiert) an die KI ging – für die Nachvollziehbarkeit."""
     _api_pruefen()
     telefon.ki_protokollieren(aid, _json().get("inhalt", ""))
+    return jsonify(ok=True)
+
+
+@bp.get("/api/telefon/konfig")
+def api_konfig():
+    """Der Telefon-Container holt hier jede Minute seine Einstellungen (Fritzbox, Schlüssel)."""
+    _api_pruefen()
+    return jsonify(telefon.konfig_fuer_container())
+
+
+@bp.post("/api/telefon/status")
+def api_status():
+    _api_pruefen()
+    d = _json()
+    telefon.status_melden({"angemeldet": bool(d.get("angemeldet")), "text": str(d.get("text", ""))[:300],
+                           "version": str(d.get("version", ""))[:40]})
     return jsonify(ok=True)

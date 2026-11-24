@@ -12,6 +12,25 @@
   <p><button>Speichern</button></p>
 </form>
 
+<form method="post" class="karte" id="verbindung"><input type="hidden" name="bereich" value="verbindung">
+  <h2 class="zeile">Verbindung zur Fritzbox und zu den Diensten
+    {% if status.zeit %}<span class="chip rechts {{ 'ok' if status.aktuell and status.angemeldet else 'fehler' }}">
+      {{ 'Fritzbox: angemeldet' if status.aktuell and status.angemeldet else ('Fritzbox: nicht angemeldet' if status.aktuell else 'Telefon-Container meldet sich nicht') }}</span>
+    {% else %}<span class="chip rechts warnung">Telefon-Container noch nicht gesehen</span>{% endif %}</h2>
+  {% if status.text %}<p class="hinweis" style="margin-top:-6px">{{ status.text }} · {{ status.zeit|datum }}</p>{% endif %}
+  <p class="hinweis">In der Fritzbox: Telefonie → Telefoniegeräte → Neues Gerät einrichten → Telefon → LAN/WLAN (IP-Telefon).
+    Benutzername und Kennwort von dort hier eintragen. Geheime Felder leer lassen = unverändert.</p>
+  <div class="felder">
+    {% for k, name, standard, geheim in VERBINDUNG %}
+    <div><label for="{{ k }}">{{ name }}{% if geheim and verbindung[k] %} <span class="chip ok">gesetzt</span>{% endif %}</label>
+      {% if geheim %}<input id="{{ k }}" name="{{ k }}" type="password" autocomplete="new-password" placeholder="{{ 'unverändert lassen' if verbindung[k] else '' }}">
+      {% else %}<input id="{{ k }}" name="{{ k }}" value="{{ verbindung[k] }}" placeholder="{{ standard }}">{% endif %}</div>
+    {% endfor %}
+  </div>
+  <p class="hinweis">Die Fritzbox am besten mit IP-Adresse angeben (Heimnetz → Netzwerk → Netzwerkeinstellungen → IPv4). Schlüssel liegen verschlüsselt im Datenordner.</p>
+  <p><button>Speichern</button></p>
+</form>
+
 <section class="karte eng"><h2>Notfälle außerhalb der Bürozeiten</h2>
   <p class="hinweis" style="padding:0 12px">Regel der Gemeinschaft geht vor der allgemeinen Regel. Ohne passende Regel gilt „sonstiger Notfall“, sonst wird nur aufgenommen.</p>
   <div class="scroll"><table>

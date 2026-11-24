@@ -176,3 +176,18 @@ def test_steuerung_start_und_weiter():
         assert await bot.http_route("GET", "/weiter/abc", "") == "0171"
         assert await bot.http_route("GET", "/weiter/abc", "") == ""
     lauf(t())
+
+
+def test_asterisk_dateien_aus_einstellungen():
+    from sprachbot import konfig
+    vorlagen = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "asterisk")
+    k = {"tel_fritzbox_host": "192.168.131.1", "tel_sip_benutzer": "casalo", "tel_sip_passwort": "geheim",
+         "tel_sip_port": "5070", "tel_rtp_von": "10000", "tel_rtp_bis": "10100"}
+    d = konfig.dateien(k, vorlagen)
+    assert "server_uri=sip:192.168.131.1" in d["pjsip.conf"] and "password=geheim" in d["pjsip.conf"]
+    assert "bind=0.0.0.0:5070" in d["pjsip.conf"] and "rtpstart=10000" in d["rtp.conf"]
+    # Asterisk-Variablen im Wählplan bleiben unberührt, der SIP-Benutzer wird eingesetzt
+    assert "${CASALO_ID}" in d["extensions.conf"] and "exten => casalo,1" in d["extensions.conf"]
+    # ohne Zugang: nur Transport, keine Anmeldung
+    leer = konfig.dateien({}, vorlagen)["pjsip.conf"]
+    assert "transport-udp" in leer and "registration" not in leer and "${" not in leer

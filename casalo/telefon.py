@@ -248,3 +248,72 @@ def anruf_beenden(aid, dauer_s, verlauf, anliegen="", status=None, weiterleitung
 def ki_protokollieren(aid, inhalt):
     db.ex("INSERT INTO ki_protokoll (zeit, anruf_id, inhalt) VALUES (?, ?, ?)",
           (jetzt().isoformat(timespec="seconds"), aid, inhalt[:20000]))
+
+
+# ------------------------------------------------------------------ Verbindung (Fritzbox, Dienste) – in der Oberfläche einstellbar
+VERBINDUNG = [
+    # schluessel, Bezeichnung, Standard, geheim
+    ("tel_fritzbox_host", "Fritzbox (IP-Adresse)", "fritz.box", False),
+    ("tel_sip_benutzer", "Benutzername des IP-Telefons", "", False),
+    ("tel_sip_passwort", "Kennwort des IP-Telefons", "", True),
+    ("tel_sip_port", "SIP-Port auf dem Server", "5070", False),
+    ("tel_rtp_von", "Sprachdaten (RTP) von Port", "10000", False),
+    ("tel_rtp_bis", "bis Port", "10100", False),
+    ("tel_deepgram_key", "Deepgram API-Schlüssel", "", True),
+    ("tel_deepgram_modell", "Deepgram-Modell", "nova-2", False),
+    ("tel_anthropic_key", "Claude API-Schlüssel", "", True),
+    ("tel_claude_modell", "Claude-Modell", "claude-haiku-5-5", False),
+]
+PFLICHT = ("tel_sip_benutzer", "tel_sip_passwort", "tel_deepgram_key", "tel_anthropic_key")
+
+
+def verbindung(klartext=False):
+    """Einstellungen fürs Telefon. Geheime Werte liegen verschlüsselt und werden nur für den Container entschlüsselt."""
+    out = {}
+    for k, _, standard, geheim in VERBINDUNG:
+        wert = db.setting(k, "")
+        if geheim:
+            wert = db.decrypt(wert) if klartext else ("gesetzt" if wert else "")
+        out[k] = wert or ("" if geheim else standard)
+    return out
+
+
+def verbindung_speichern(form):
+    fehler = []
+    for k, name, standard, geheim in VERBINDUNG:
+        wert = (form.get(k) or "").strip()
+        if geheim:
+            if wert:                                   # leer = unverändert lassen
+                db.set_setting(k, db.encrypt(wert))
+            elif form.get(k + "_loeschen"):
+                db.set_setting(k, "")
+            continue
+        if k in ("tel_sip_port", "tel_rtp_von", "tel_rtp_bis") and wert and not (wert.isdigit() and 1024 <= int(wert) <= 65535):
+            fehler.append(f"{name}: Zahl zwischen 1024 und 65535.")
+            continue
+        db.set_setting(k, wert or standard)
+    v = verbindung()
+    if int(v["tel_rtp_bis"]) <= int(v["tel_rtp_von"]):
+        fehler.append("Der RTP-Bereich ist ungültig (bis muss größer als von sein).")
+    return fehler
+
+
+def konfig_fuer_container():
+    v = verbindung(klartext=True)
+    v["vollstaendig"] = all(v.get(k) for k in PFLICHT)
+    return v
+
+
+def status_melden(daten):
+    db.set_setting("tel_status", json.dumps({**daten, "zeit": jetzt().isoformat(timespec="seconds")}, ensure_ascii=False))
+
+
+def status():
+    try:
+        s = json.loads(db.setting("tel_status", "") or "{}")
+    except ValueError:
+        s = {}
+    if s.get("zeit"):
+        alter = (jetzt() - datetime.datetime.fromisoformat(s["zeit"])).total_seconds()
+        s["aktuell"] = alter < 180                       # Container meldet sich jede Minute
+    return s

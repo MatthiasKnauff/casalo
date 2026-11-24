@@ -3,7 +3,7 @@
 FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive PYTHONUNBUFFERED=1 TZ=Europe/Berlin
 RUN apt-get update \
- && apt-get install -y --no-install-recommends asterisk asterisk-modules gettext-base python3 python3-venv ca-certificates curl tzdata \
+ && apt-get install -y --no-install-recommends asterisk asterisk-modules python3 python3-venv ca-certificates curl tzdata \
  && rm -rf /var/lib/apt/lists/*
 RUN python3 -m venv /opt/venv
 ENV PATH=/opt/venv/bin:$PATH

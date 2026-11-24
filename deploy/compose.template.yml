@@ -15,7 +15,8 @@ services:
       - daten:/data
 
   # KI-Telefon: Asterisk an der Fritzbox + Sprachbot. Im Netzwerk des Servers (SIP und Sprache sind UDP).
-  # Ohne SIP_BENUTZER wartet der Container nur (z. B. auf dem Testserver).
+  # Fritzbox-Zugang und Schlüssel stellt man in Casalo ein (KI-Telefon → Einstellungen);
+  # der Container holt sie sich jede Minute. Bis dahin wartet er nur.
   telefon:
     image: __IMAGE_BASE__-telefon:__TAG__
     container_name: casalo-telefon-__APP_ENV__
@@ -26,16 +27,6 @@ services:
     environment:
       TZ: Europe/Berlin
       CASALO_PORT: ${HOST_PORT}
-      FRITZBOX_HOST: ${FRITZBOX_HOST:-fritz.box}
-      SIP_BENUTZER: ${SIP_BENUTZER:-}
-      SIP_PASSWORT: ${SIP_PASSWORT:-}
-      SIP_PORT: ${SIP_PORT:-5070}
-      RTP_VON: ${RTP_VON:-10000}
-      RTP_BIS: ${RTP_BIS:-10100}
-      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
-      DEEPGRAM_MODELL: ${DEEPGRAM_MODELL:-nova-2}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      CLAUDE_MODELL: ${CLAUDE_MODELL:-claude-haiku-5-5}
     volumes:
       - daten:/casalo-daten:ro          # liest dort den Schlüssel für die Casalo-Schnittstelle
 

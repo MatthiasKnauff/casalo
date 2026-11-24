@@ -8,7 +8,7 @@ class Deepgram:
     """Schickt Audio, liefert Ereignisse: ("zwischen", text) während der Anrufer spricht, ("fertig", satz) am Ende."""
 
     def __init__(self, schluessel=None, modell=None):
-        self.schluessel = schluessel or os.environ["DEEPGRAM_API_KEY"]
+        self.schluessel = schluessel or os.environ.get("DEEPGRAM_API_KEY", "")
         self.modell = modell or os.environ.get("DEEPGRAM_MODELL", "nova-2")
         self.ereignisse = asyncio.Queue()
         self._ws = None

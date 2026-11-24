@@ -205,3 +205,27 @@ def test_telefon_schluessel_datei(client, app, tmp_path):
     with app.app_context():
         neu = db.telefon_token()
     assert neu != alt and open(datei).read() == neu
+
+
+def test_telefon_verbindung_einstellbar(client, app):
+    from flask.testing import FlaskClient
+    r = client.post("/telefon/einstellungen", data={"bereich": "verbindung", "tel_fritzbox_host": "192.168.131.1",
+                                                    "tel_sip_benutzer": "casalo", "tel_sip_passwort": "geheim123",
+                                                    "tel_sip_port": "5070", "tel_rtp_von": "10000", "tel_rtp_bis": "10100",
+                                                    "tel_deepgram_key": "dg", "tel_anthropic_key": "sk-ant"})
+    assert r.status_code == 302
+    seite = client.get("/telefon/einstellungen").get_data(as_text=True)
+    assert "geheim123" not in seite and "sk-ant" not in seite and "192.168.131.1" in seite
+    h = _api(client, app)
+    k = client.get("/api/telefon/konfig", headers=h).json
+    assert k["tel_sip_passwort"] == "geheim123" and k["vollstaendig"] and k["tel_claude_modell"] == "claude-haiku-5-5"
+    # leeres Kennwortfeld lässt den gespeicherten Wert stehen
+    client.post("/telefon/einstellungen", data={"bereich": "verbindung", "tel_sip_benutzer": "casalo", "tel_rtp_von": "10000", "tel_rtp_bis": "10100"})
+    assert client.get("/api/telefon/konfig", headers=h).json["tel_sip_passwort"] == "geheim123"
+    # ungültiger Port wird abgewiesen
+    client.post("/telefon/einstellungen", data={"bereich": "verbindung", "tel_sip_port": "80", "tel_rtp_von": "10000", "tel_rtp_bis": "10100"})
+    assert client.get("/api/telefon/konfig", headers=h).json["tel_sip_port"] == "5070"
+    # Status vom Container
+    assert FlaskClient.post(client, "/api/telefon/status", headers=h, json={"angemeldet": True, "text": "an der Fritzbox angemeldet"}).json["ok"]
+    assert "Fritzbox: angemeldet" in client.get("/telefon/einstellungen").get_data(as_text=True)
+    assert FlaskClient.get(client, "/api/telefon/konfig").status_code == 401

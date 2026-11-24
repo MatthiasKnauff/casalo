@@ -22,13 +22,9 @@ Neues Projekt → Vorlage **„Eigenes Programm (ZIP hochladen)“** → `casalo
 - Port im Container: `8000`
 - Datenordner im Container: `/data`
 - Domain Produktiv: `hausverwaltung.knauff.info` (später änderbar)
-- Umgebungsvariablen **nur auf dem Produktivserver** (für das KI-Telefon):
-  `SIP_BENUTZER`, `SIP_PASSWORT`, `DEEPGRAM_API_KEY`, `ANTHROPIC_API_KEY`,
-  optional `FRITZBOX_HOST` (Standard `fritz.box`), `SIP_PORT` (5070), `RTP_VON`/`RTP_BIS` (10000–10100),
-  `CLAUDE_MODELL`, `ABRUF_UHRZEIT` (06:00).
-  Ohne diese Werte wartet der Telefon-Container nur – auf dem Testserver also einfach weglassen.
-  Wer das Telefon auch auf dem Testserver will: in der Fritzbox ein zweites IP-Telefon anlegen
-  (eine Anmeldung je Gerät).
+- Umgebungsvariablen: keine nötig. Fritzbox-Zugang und Schlüssel für das KI-Telefon trägt man in Casalo
+  ein (KI-Telefon → Einstellungen). Optional `ABRUF_UHRZEIT` (Standard `06:00`) für den Bankabruf.
+  Solange in Casalo nichts eingetragen ist, wartet der Telefon-Container nur.
 
 Beim Bauen laufen alle Tests – schlägt einer fehl, entsteht kein Image. Der Testserver zeigt oben
 „Testserver – wird vX.Y.Z“. Produktiv kommt eine Version erst nach Freigabe (Release).
@@ -62,20 +58,24 @@ Erster Aufruf: Sie legen sich als Administrator an (Name, E-Mail, Passwort).
 ## 4. KI-Telefon einrichten
 
 ### Fritzbox
-Telefonie → Telefoniegeräte → **Neues Gerät einrichten** → Telefon → **LAN/WLAN (IP-Telefon)**.
-Benutzername und Kennwort vergeben (das sind `SIP_BENUTZER` und `SIP_PASSWORT`) und festlegen, auf welche
-Rufnummer das Gerät reagiert. Unter Telefonie → Eigene Rufnummern → Anschlusseinstellungen muss
-„Anmeldung aus dem Internet“ nicht erlaubt sein – der Container meldet sich im Heimnetz an.
+Telefonie → Telefoniegeräte → **Neues Gerät einrichten** → Telefon (mit und ohne Anrufbeantworter) →
+**LAN/WLAN (IP-Telefon)** → Name „Casalo“ → Benutzername und Kennwort vergeben → ausgehende Rufnummer
+(für Notfall-Weiterleitungen) → ankommende Anrufe nur für die Nummer der Hausverwaltung.
 
-### Schlüssel
-- **Deepgram** (Spracherkennung): Konto auf deepgram.com, API-Schlüssel.
-- **Claude**: API-Schlüssel aus der Claude Console.
-- Die Verbindung zu Casalo braucht nichts: Der Telefon-Container liest Adresse und Schlüssel selbst
-  (gemeinsames Volume im selben Stack). Ein neuer Schlüssel (KI-Telefon → Einstellungen) gilt sofort.
+### In Casalo
+KI-Telefon → Einstellungen → **Verbindung zur Fritzbox und zu den Diensten**:
+- Fritzbox als IP-Adresse (Heimnetz → Netzwerk → Netzwerkeinstellungen → IPv4), Benutzername und Kennwort
+  des IP-Telefons, SIP-Port (5070) und RTP-Bereich (10000–10100) auf dem Server.
+- **Deepgram**-Schlüssel (deepgram.com) und **Claude**-Schlüssel (Claude Console), jeweils mit Modell.
+
+Der Telefon-Container holt die Einstellungen jede Minute ab und meldet zurück, ob er an der Fritzbox
+angemeldet ist – das steht oben im Kasten („Fritzbox: angemeldet“). Schlüssel liegen verschlüsselt im
+Datenordner; geheime Felder leer lassen heißt „unverändert“.
+Für einen zweiten Server (Test) in der Fritzbox ein eigenes IP-Telefon anlegen – je Gerät eine Anmeldung.
 
 ### Container
-Läuft im Netzwerk des Servers (SIP und Sprache sind UDP); belegt werden SIP-Port 5070 und RTP 10000–10100.
-Updates kommen mit jeder Freigabe zusammen mit der App.
+Läuft im selben Stack wie Casalo, im Netzwerk des Servers (SIP und Sprache sind UDP). Adresse und Schlüssel
+der Casalo-Schnittstelle liest er selbst aus dem gemeinsamen Volume. Updates kommen mit jeder Freigabe.
 
 ### Verhalten
 - Begrüßung mit Hinweis auf KI und Protokoll (Einstellungen).

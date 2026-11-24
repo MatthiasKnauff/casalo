@@ -42,6 +42,16 @@ class Casalo:
     async def ende(self, aid, **daten):
         return await self._post(f"/api/telefon/anruf/{aid}/ende", daten)
 
+    async def konfig(self):
+        r = await self.http.get(f"{self.url}/api/telefon/konfig")
+        r.raise_for_status()
+        return r.json()
+
+    async def status(self, angemeldet, text):
+        import os as _os
+        await self._post("/api/telefon/status", {"angemeldet": angemeldet, "text": text,
+                                                 "version": _os.environ.get("APP_VERSION", "")})
+
     async def ki_protokoll(self, aid, inhalt):
         try:
             await self._post(f"/api/telefon/anruf/{aid}/ki", {"inhalt": inhalt})
@@ -56,7 +66,7 @@ class Claude:
         import httpx
         self.modell = modell or os.environ.get("CLAUDE_MODELL", "claude-haiku-5-5")
         self.http = httpx.AsyncClient(timeout=30, headers={
-            "x-api-key": schluessel or os.environ["ANTHROPIC_API_KEY"],
+            "x-api-key": schluessel or os.environ.get("ANTHROPIC_API_KEY", ""),
             "anthropic-version": "2023-06-01", "content-type": "application/json"})
 
     async def antwort(self, system, nachrichten, werkzeuge):

@@ -20,9 +20,10 @@ STILLE_ENDE = 30
 
 
 class Bot:
-    def __init__(self, casalo, claude, stimme, hoeren_fabrik):
+    def __init__(self, casalo, claude_fabrik, stimme, hoeren_fabrik, bereit=lambda: True):
         self.casalo = casalo
-        self.claude = claude
+        self.claude_fabrik = claude_fabrik
+        self.bereit = bereit
         self.stimme = stimme
         self.hoeren_fabrik = hoeren_fabrik
         self.sitzungen = {}          # id -> {"nummer", "gespraech", "weiter"}
@@ -68,8 +69,10 @@ class Bot:
         hoeren = self.hoeren_fabrik()
         g = None
         try:
+            if not self.bereit():
+                raise RuntimeError("KI-Telefon ist noch nicht vollständig eingerichtet")
             start = await self.casalo.start(sitzung["nummer"])
-            g = Gespraech(self.casalo, self.claude, Pseudonymisierer(start.get("anonymisieren", True)), start,
+            g = Gespraech(self.casalo, self.claude_fabrik(), Pseudonymisierer(start.get("anonymisieren", True)), start,
                           sitzung["nummer"])
             await hoeren.verbinden()
             gruss = await g.begruessung()
@@ -145,14 +148,39 @@ class Bot:
 async def main():
     from .dienste import Casalo, Claude
     from .hoeren import Deepgram
+    from .konfig import Verwaltung
     from .stimme import Piper
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
-    bot = Bot(Casalo(), Claude(), Piper(), Deepgram)
+    casalo = Casalo()
+    verwaltung = Verwaltung(casalo)
+    while True:                                   # Casalo startet evtl. gleichzeitig
+        try:
+            await verwaltung.laden()
+            break
+        except Exception as e:
+            log.info("Warte auf Casalo (%s) …", e)
+            await asyncio.sleep(10)
+    verwaltung.asterisk_starten()
+    if not verwaltung.bereit:
+        log.info("KI-Telefon noch nicht eingerichtet – Fritzbox-Zugang und Schlüssel in Casalo eintragen "
+                 "(KI-Telefon → Einstellungen). Werte werden jede Minute abgeholt.")
+
+    class Dienste:
+        """Schlüssel und Modelle immer aus den aktuellen Einstellungen."""
+
+        def claude(self):
+            return Claude(verwaltung.wert("tel_anthropic_key"), verwaltung.wert("tel_claude_modell", "claude-haiku-5-5"))
+
+        def hoeren(self):
+            return Deepgram(verwaltung.wert("tel_deepgram_key"), verwaltung.wert("tel_deepgram_modell", "nova-2"))
+
+    d = Dienste()
+    bot = Bot(casalo, d.claude, Piper(), d.hoeren, bereit=lambda: verwaltung.bereit)
     s1 = await asyncio.start_server(bot.anruf, "127.0.0.1", int(os.environ.get("AUDIOSOCKET_PORT", 9092)))
     s2 = await asyncio.start_server(bot.http, "127.0.0.1", int(os.environ.get("STEUER_PORT", 9093)))
     log.info("Sprachbot bereit (AudioSocket %s, Steuerung %s)", s1.sockets[0].getsockname(), s2.sockets[0].getsockname())
     async with s1, s2:
-        await asyncio.gather(s1.serve_forever(), s2.serve_forever())
+        await asyncio.gather(s1.serve_forever(), s2.serve_forever(), verwaltung.schleife())
 
 
 if __name__ == "__main__":
