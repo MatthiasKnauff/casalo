@@ -2,7 +2,7 @@
 # HOST_PORT, VOLUME_NAME und die übrigen Variablen kommen aus dem Portainer-Stack (Deploy-Automatik).
 services:
   app:
-    image: ghcr.io/matthiasknauff/casalo:v0.1.1
+    image: ghcr.io/matthiasknauff/casalo:v0.1.2
     container_name: casalo-prod
     restart: unless-stopped
     ports:
@@ -18,7 +18,7 @@ services:
   # Fritzbox-Zugang und Schlüssel stellt man in Casalo ein (KI-Telefon → Einstellungen);
   # der Container holt sie sich jede Minute. Bis dahin wartet er nur.
   telefon:
-    image: ghcr.io/matthiasknauff/casalo-telefon:v0.1.1
+    image: ghcr.io/matthiasknauff/casalo-telefon:v0.1.2
     container_name: casalo-telefon-prod
     restart: unless-stopped
     network_mode: host
