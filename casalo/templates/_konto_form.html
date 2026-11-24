@@ -1,0 +1,25 @@
+<form method="post" action="/g/{{ g.id }}/konto">
+  {% if k %}<input type="hidden" name="id" value="{{ k.id }}">{% endif %}
+  <div class="felder">
+    <div><label>Art</label><select name="art"><option value="hausgeld" {{ 'selected' if k and k.art == 'hausgeld' }}>Hausgeldkonto</option><option value="ruecklage" {{ 'selected' if k and k.art == 'ruecklage' }}>Rücklagenkonto</option></select></div>
+    <div><label>Bank</label><input name="bank" value="{{ k.bank if k }}"></div>
+    <div><label>IBAN</label><input name="iban" value="{{ k.iban if k }}"></div>
+    <div><label>BIC</label><input name="bic" value="{{ k.bic if k }}"></div>
+    <div><label>Anfangssaldo</label><input name="anfangssaldo" value="{{ k.anfangssaldo_cent|betrag if k }}" placeholder="0,00"></div>
+    <div><label>zum Datum</label><input type="date" name="anfangsdatum" value="{{ k.anfangsdatum if k }}"></div>
+    <div><label>Abruf</label><select name="zugang">
+      <option value="fints" {{ 'selected' if k and k.zugang == 'fints' }}>FinTS (direkt zur Bank)</option>
+      <option value="finapi" {{ 'selected' if k and k.zugang == 'finapi' }}>finAPI (Banken ohne FinTS)</option>
+      <option value="datei" {{ 'selected' if not k or k.zugang == 'datei' }}>Datei-Import (CAMT/CSV)</option></select></div>
+  </div>
+  <details class="form"><summary>FinTS-Zugang</summary>
+    <div class="felder">
+      <div><label>BLZ</label><input name="fints_blz" value="{{ k.fints_blz if k }}"></div>
+      <div style="grid-column: span 2"><label>FinTS-Adresse der Bank</label><input name="fints_url" value="{{ k.fints_url if k }}" placeholder="https://banking-…/fints"></div>
+      <div><label>Anmeldename</label><input name="fints_login" value="{{ k.fints_login if k }}" autocomplete="off"></div>
+      <div><label>PIN {{ '(gespeichert)' if k and k.fints_pin }}</label><input name="fints_pin" type="password" autocomplete="new-password" placeholder="{{ 'unverändert lassen' if k and k.fints_pin else '' }}"></div>
+    </div>
+    <p class="hinweis">Die PIN liegt verschlüsselt im Datenordner. Überweisungen gibt es in Casalo nicht – nur Abruf und Lastschrift-Dateien.</p>
+  </details>
+  <p><button class="klein">Speichern</button></p>
+</form>

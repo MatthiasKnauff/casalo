@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block titel %}KI-Telefon – Einstellungen{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div><p class="muted klein" style="margin:0"><a href="/telefon">KI-Telefon</a></p><h1>Einstellungen</h1></div></div>
+<form method="post" class="karte"><input type="hidden" name="bereich" value="allgemein">
+  <h2>Begrüßung und Bürozeiten</h2>
+  <label>Begrüßung (Hinweis auf KI und Protokoll ist Pflicht und bleibt drin)</label><textarea name="telefon_begruessung">{{ begruessung }}</textarea>
+  <label>Bürozeiten</label><input name="buerozeiten" value="{{ buerozeiten }}">
+  <p class="hinweis">Format: <code>Mo-Fr 08:00-17:00; Sa 09:00-12:00</code> · gerade {{ 'Bürozeit' if ist_buerozeit else 'außerhalb der Bürozeit' }}</p>
+  <label class="haken"><input type="checkbox" name="anonymisieren" {{ 'checked' if anonymisieren }}> Namen und Adressen vor der Übergabe an Claude durch Kennungen ersetzen</label>
+  <p class="hinweis">Was der Anrufer selbst sagt, kann nur teilweise ersetzt werden (bekannte Namen und Adressen aus Casalo werden erkannt).</p>
+  <p><button>Speichern</button></p>
+</form>
+
+<section class="karte eng"><h2>Notfälle außerhalb der Bürozeiten</h2>
+  <p class="hinweis" style="padding:0 12px">Regel der Gemeinschaft geht vor der allgemeinen Regel. Ohne passende Regel gilt „sonstiger Notfall“, sonst wird nur aufgenommen.</p>
+  <div class="scroll"><table>
+  <tr><th>Gilt für</th><th>Notfall</th><th>Was tun</th><th>Nummer</th><th>Ansage</th><th></th></tr>
+  {% for r in regeln %}
+  <tr><td>{{ r.g_name or 'alle Gemeinschaften' }}</td><td>{{ NOTFALLARTEN[r.notfallart] }}</td><td>{{ AKTIONEN[r.aktion] }}</td><td>{{ r.nummer }}</td><td class="klein">{{ r.ansage }}</td>
+    <td><form method="post"><input type="hidden" name="bereich" value="regel_loeschen"><input type="hidden" name="id" value="{{ r.id }}"><button class="klein gefahr" aria-label="Löschen">✕</button></form></td></tr>
+  {% else %}<tr><td colspan="6" class="leer">Noch keine Regeln – Notfälle werden nur aufgenommen.</td></tr>{% endfor %}
+  </table></div>
+  <form method="post" style="padding:0 12px 12px"><input type="hidden" name="bereich" value="regel">
+    <div class="felder">
+      <div><label>Gilt für</label><select name="gemeinschaft_id"><option value="">alle Gemeinschaften</option>{% for g in gemeinschaften %}<option value="{{ g.id }}">{{ g.name }}</option>{% endfor %}</select></div>
+      <div><label>Notfall</label><select name="notfallart">{% for k, t in NOTFALLARTEN.items() %}<option value="{{ k }}">{{ t }}</option>{% endfor %}</select></div>
+      <div><label>Was tun</label><select name="aktion">{% for k, t in AKTIONEN.items() %}<option value="{{ k }}">{{ t }}</option>{% endfor %}</select></div>
+      <div><label>Nummer</label><input name="nummer" placeholder="0171 …"></div>
+    </div>
+    <label>Ansage (optional)</label><input name="ansage" placeholder="Bitte rufen Sie den Notdienst Sanitär Müller an: …">
+    <p><button class="zweit">Regel hinzufügen</button></p>
+  </form>
+</section>
+
+<section class="karte"><h2>Verbindung zum Telefon-Container</h2>
+  <p>Der Telefon-Container läuft im selben Stack und liest den Schlüssel selbst aus dem Datenordner – nichts abzuschreiben.
+  Nur falls er woanders läuft:</p>
+  <pre class="code">CASALO_URL=https://{{ request.host }}
+CASALO_TOKEN={{ token }}</pre>
+  <form method="post"><input type="hidden" name="bereich" value="token"><button class="klein zweit">Neuen Schlüssel erzeugen</button></form>
+</section>
+{% endblock %}

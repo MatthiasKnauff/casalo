@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block titel %}Vorgänge{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div><h1>Vorgänge</h1><p class="unter">Schäden, Anfragen, Rückrufe – auch die vom KI-Telefon</p></div>
+  <div class="zeile"><a class="knopf {{ '' if status == 'offen' else 'zweit' }}" href="?status=offen">offen</a><a class="knopf {{ '' if status == 'erledigt' else 'zweit' }}" href="?status=erledigt">erledigt</a></div></div>
+<section class="karte eng"><div class="scroll"><table>
+  <tr><th>Angelegt</th><th>Vorgang</th><th>Gemeinschaft · Einheit</th><th>Anrufer</th><th>Rückruf</th><th></th></tr>
+  {% for v in vorgaenge %}
+  <tr><td class="muted" style="white-space:nowrap">{{ v.angelegt|datum }}</td>
+      <td>{% if v.notfallart %}<span class="chip fehler">Notfall</span> {% endif %}<b>{{ v.titel }}</b><div class="klein muted" style="white-space:pre-line">{{ v.text }}</div></td>
+      <td>{{ v.g_name or '–' }}{% if v.e_nr %} · {{ v.e_nr }}{% endif %}</td>
+      <td>{{ v.firma or ((v.vorname or '') ~ ' ' ~ (v.nachname or '')).strip() or '' }}{% if v.rueckruf_nummer %}<div class="klein muted">{{ v.rueckruf_nummer }}</div>{% endif %}</td>
+      <td style="white-space:nowrap">{{ v.rueckruf_bis|datum }}</td>
+      <td><form method="post" action="/vorgang/{{ v.id }}/status"><input type="hidden" name="status" value="{{ 'offen' if v.status == 'erledigt' else 'erledigt' }}"><button class="klein zweit">{{ 'wieder öffnen' if v.status == 'erledigt' else 'erledigt' }}</button></form></td></tr>
+  {% else %}<tr><td colspan="6" class="leer">Keine Vorgänge.</td></tr>{% endfor %}
+</table></div></section>
+<section class="karte"><h2>Neuer Vorgang</h2><form method="post"><div class="felder">
+  <div><label>Gemeinschaft</label><select name="gemeinschaft_id"><option value="">–</option>{% for g in gemeinschaften %}<option value="{{ g.id }}">{{ g.name }}</option>{% endfor %}</select></div>
+  <div style="grid-column: span 2"><label>Titel</label><input name="titel" required></div></div>
+  <label>Beschreibung</label><textarea name="text"></textarea><p><button>Anlegen</button></p></form></section>
+{% endblock %}

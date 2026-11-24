@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block titel %}Versammlungen{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div><h1>Eigentümerversammlungen</h1><p class="unter">Einladung mindestens drei Wochen vorher (§ 24 Abs. 4 WEG)</p></div></div>
+<section class="karte eng"><div class="scroll"><table>
+  <tr><th>Termin</th><th>Gemeinschaft</th><th>Ort</th><th class="zahl">TOPs</th><th>Einladung</th><th>Status</th></tr>
+  {% for v in versammlungen %}
+  <tr><td style="white-space:nowrap"><a href="/versammlung/{{ v.id }}"><b>{{ v.beginn|datum }}</b></a></td><td>{{ v.g_name }}</td>
+      <td>{{ v.ort }}{% if v.hybrid %} <span class="chip info">auch online</span>{% endif %}</td><td class="zahl">{{ v.n_tops }}</td>
+      <td>{% if v.status == 'durchgefuehrt' %}<span class="muted">–</span>{% else %}<span class="chip {{ v.frist_art }}">{{ v.frist_text }}</span>{% endif %}</td>
+      <td>{{ {'geplant':'geplant','eingeladen':'eingeladen','durchgefuehrt':'abgeschlossen'}[v.status] }}</td></tr>
+  {% else %}<tr><td colspan="6" class="leer">Noch keine Versammlungen.</td></tr>{% endfor %}
+</table></div></section>
+<section class="karte"><h2>Neue Versammlung</h2>
+  <form method="post"><div class="felder">
+    <div><label>Gemeinschaft</label><select name="gemeinschaft_id" required>{% for g in gemeinschaften %}<option value="{{ g.id }}">{{ g.name }}{{ ' (online möglich)' if g.hybrid_erlaubt }}</option>{% endfor %}</select></div>
+    <div><label>Art</label><select name="art"><option value="ordentlich">ordentlich</option><option value="ausserordentlich">außerordentlich</option></select></div>
+    <div><label>Datum</label><input type="date" name="datum" required></div>
+    <div><label>Uhrzeit</label><input type="time" name="uhrzeit" value="18:00"></div>
+    <div style="grid-column: span 2"><label>Ort</label><input name="ort"></div>
+  </div>
+  <label class="haken"><input type="checkbox" name="hybrid"> Online-Teilnahme anbieten (nur wenn die Gemeinschaft das beschlossen hat)</label>
+  <label>Videolink</label><input name="videolink" placeholder="https://…">
+  <p><button>Anlegen</button></p></form>
+</section>
+{% endblock %}

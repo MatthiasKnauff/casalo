@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titel %}Lastschrift{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}">WEG {{ g.name }}</a></p>
+  <h1>Hausgeld per Lastschrift</h1>
+  <p class="unter">Erzeugt eine SEPA-Datei (pain.008), die Sie im Onlinebanking des Hausgeldkontos hochladen.</p></div></div>
+{% if not g.glaeubiger_id %}<div class="meldung fehler">Die Gemeinschaft hat noch keine Gläubiger-ID (<a href="/g/{{ g.id }}?tab=einstellungen">Einstellungen</a>).</div>{% endif %}
+{% if not konto %}<div class="meldung fehler">Es ist noch kein Hausgeldkonto angelegt.</div>{% endif %}
+{% if not wp.wp %}<div class="meldung fehler">Für {{ jahr }} gibt es keinen Wirtschaftsplan – ohne ihn steht der Betrag nicht fest.</div>{% endif %}
+<section class="karte eng"><div class="scroll"><table>
+  <tr><th>Einheit</th><th>Eigentümer</th><th>IBAN</th><th>Mandat</th><th class="zahl">Betrag</th><th></th></tr>
+  {% for x in posten %}
+  <tr><td>{{ x.einheit.nr }}</td><td><a href="/person/{{ x.person.id }}">{{ x.person.firma or (x.person.nachname ~ ', ' ~ x.person.vorname) }}</a></td>
+      <td class="klein">{{ x.person.iban }}</td><td class="klein">{{ x.person.mandat_ref }} {{ x.person.mandat_datum|datum }}</td>
+      <td class="zahl">{{ x.betrag_cent|eur }}</td><td>{% if x.ok %}<span class="chip ok">bereit</span>{% else %}<span class="chip fehler">Angaben fehlen</span>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="6" class="leer">Kein Eigentümer dieser Gemeinschaft zahlt per Lastschrift.</td></tr>{% endfor %}
+  {% if posten %}<tr class="summe"><td colspan="4">Summe (nur „bereit“)</td><td class="zahl">{{ summe|eur }}</td><td></td></tr>{% endif %}
+</table></div></section>
+<form method="post" class="karte"><div class="felder">
+  <div><label>Fällig am</label><input type="date" name="faellig" value="{{ vorschlag.isoformat() }}" required></div>
+  <div><label>Monat im Verwendungszweck</label><input name="monat" placeholder="{{ vorschlag.strftime('%m/%Y') }}"></div>
+  <input type="hidden" name="jahr" value="{{ jahr }}">
+</div><p><button {{ 'disabled' if not summe }}>SEPA-Datei erzeugen</button></p></form>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block titel %}Buchungen {{ jahr }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}">WEG {{ g.name }}</a></p>
+  <h1>Buchungen {{ jahr }}</h1></div>
+  <div class="zeile"><a class="knopf zweit" href="?jahr={{ jahr - 1 }}">← {{ jahr - 1 }}</a><a class="knopf zweit" href="?jahr={{ jahr + 1 }}">{{ jahr + 1 }} →</a></div>
+</div>
+<section class="karte">
+  <h2>Neue Buchung</h2>
+  <p class="hinweis" style="margin-top:-6px">Bankumsätze werden unter „Bank &amp; Hausgeld“ zugeordnet – hier nur Buchungen ohne Bankumsatz (z. B. Barzahlung, Umbuchung).</p>
+  <form method="post"><div class="felder">
+    <div><label>Datum</label><input type="date" name="datum" required></div>
+    <div><label>Art</label><select name="art"><option value="kosten">Kosten</option><option value="hausgeld">Hausgeld-Eingang</option><option value="sonstig">Sonstiges / Umbuchung</option></select></div>
+    <div><label>Richtung</label><select name="richtung"><option value="aus">Ausgang</option><option value="ein">Eingang</option></select></div>
+    <div><label>Betrag</label><input name="betrag" placeholder="0,00" required></div>
+    <div><label>Konto</label><select name="konto_id"><option value="">–</option>{% for k in konten %}<option value="{{ k.id }}">{{ 'Rücklage' if k.art == 'ruecklage' else 'Hausgeld' }} · {{ k.bank }}</option>{% endfor %}</select></div>
+    <div><label>Kostenart</label><select name="kostenart_id"><option value="">–</option>{% for k in kostenarten %}<option value="{{ k.id }}">{{ k.name }}</option>{% endfor %}</select></div>
+    <div><label>Einheit</label><select name="einheit_id"><option value="">–</option>{% for e in einheiten %}<option value="{{ e.id }}">{{ e.nr }}</option>{% endfor %}</select></div>
+    <div style="grid-column: span 2"><label>Text</label><input name="text"></div>
+  </div>
+  <p class="hinweis">Kosten auf dem Rücklagenkonto gelten als Entnahme aus der Rücklage und werden nicht umgelegt.</p>
+  <p><button>Buchen</button></p></form>
+</section>
+<section class="karte eng"><div class="scroll"><table>
+  <tr><th>Datum</th><th>Art</th><th>Text</th><th>Kostenart / Einheit</th><th>Konto</th><th class="zahl">Betrag</th><th></th></tr>
+  {% for b in buchungen %}
+  <tr><td style="white-space:nowrap">{{ b.datum|datum }}</td><td>{{ {'kosten':'Kosten','hausgeld':'Hausgeld','sonstig':'Sonstiges'}[b.art] }}</td>
+      <td>{{ b.text }}</td><td>{{ b.ka_name or '' }}{{ b.e_nr or '' }}</td>
+      <td class="muted">{{ ('Rücklage' if b.konto_art == 'ruecklage' else 'Hausgeld') if b.konto_art else '' }}</td>
+      <td class="zahl {{ 'rot' if b.betrag_cent < 0 }}">{{ b.betrag_cent|eur }}</td>
+      <td><form method="post" action="/buchung/{{ b.id }}/loeschen"><button class="klein gefahr" aria-label="Löschen">✕</button></form></td></tr>
+  {% else %}<tr><td colspan="7" class="leer">Keine Buchungen in {{ jahr }}.</td></tr>{% endfor %}
+</table></div></section>
+{% endblock %}

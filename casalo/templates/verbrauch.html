@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block titel %}{{ ka.name }} {{ jahr }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}?tab=kostenarten">WEG {{ g.name }}</a></p>
+  <h1>Verbrauch {{ ka.name }} {{ jahr }}</h1>
+  <p class="unter">Zählerstände bzw. Verbrauch je Einheit – danach wird {{ ka.name }} verteilt.</p></div>
+  <div class="zeile"><a class="knopf zweit" href="/g/{{ g.id }}/verbrauch/{{ ka.id }}/{{ jahr - 1 }}">← {{ jahr - 1 }}</a><a class="knopf zweit" href="/g/{{ g.id }}/verbrauch/{{ ka.id }}/{{ jahr + 1 }}">{{ jahr + 1 }} →</a></div>
+</div>
+<form method="post" class="karte eng"><table>
+  <tr><th>Einheit</th><th>Lage</th><th class="zahl">Verbrauch</th></tr>
+  {% for e in einheiten %}<tr><td><b>{{ e.nr }}</b></td><td>{{ e.lage }}</td>
+    <td class="zahl" style="width:180px"><input name="e_{{ e.id }}" value="{{ werte.get(e.id)|zahl }}" style="text-align:right" aria-label="Verbrauch {{ e.nr }}"></td></tr>{% endfor %}
+</table><p style="padding:0 10px"><button>Speichern</button></p></form>
+{% endblock %}

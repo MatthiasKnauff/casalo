@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block titel %}{{ g.name }}{% endblock %}
+{% block inhalt %}
+<div class="kopf">
+  <div>
+    <p class="muted klein" style="margin:0"><a href="/gemeinschaften">Gemeinschaften</a> › {{ g.nr or 'WEG' }}</p>
+    <h1>WEG {{ g.name }}</h1>
+    <p class="unter">{{ g.strasse }}{{ ', ' if g.strasse }}{{ g.plz }} {{ g.ort }}</p>
+  </div>
+  <div class="zeile">
+    <a class="knopf zweit" href="/g/{{ g.id }}/buchungen">Buchungen</a>
+    <a class="knopf zweit" href="/g/{{ g.id }}/lastschrift">Lastschrift</a>
+    <a class="knopf" href="/g/{{ g.id }}/abrechnung/{{ jahr - 1 }}">Abrechnung {{ jahr - 1 }}</a>
+  </div>
+</div>
+
+<nav class="reiter" aria-label="Bereiche">
+  {% for k, t in tabs %}<a class="{{ 'an' if tab == k }}" href="/g/{{ g.id }}?tab={{ k }}">{{ t }}</a>{% endfor %}
+</nav>
+
+{% if tab == 'einheiten' %}
+<section class="karte eng">
+  <div class="scroll"><table>
+    <tr><th>Nr.</th><th>Lage</th><th>Art</th><th class="zahl">Fläche</th><th class="zahl">MEA</th><th>Eigentümer</th><th class="zahl">Hausgeld mtl.</th><th class="zahl">offen {{ jahr }}</th><th></th></tr>
+    {% for e in einheiten %}
+    <tr>
+      <td><b>{{ e.nr }}</b></td><td>{{ e.lage }}</td><td>{{ e.art }}</td>
+      <td class="zahl">{{ e.wohnflaeche|zahl }} m²</td><td class="zahl">{{ e.mea|zahl }}</td>
+      <td>{% for p in e.eigentuemer %}<a href="/person/{{ p.id }}">{{ p.firma or (p.nachname ~ ', ' ~ p.vorname) }}</a>{% if p.zahlweise == 'lastschrift' %} <span class="chip info">Lastschrift</span>{% endif %}<br>{% else %}<span class="rot">kein Eigentümer</span>{% endfor %}</td>
+      <td class="zahl">{{ e.monat|eur if e.monat is not none else '–' }}</td>
+      <td class="zahl {{ 'rot' if e.offen and e.offen > 0 }}">{{ e.offen|eur if e.offen is not none else '–' }}</td>
+      <td>
+        <details class="form"><summary>bearbeiten</summary>
+          <form method="post" action="/g/{{ g.id }}/einheit">
+            <input type="hidden" name="id" value="{{ e.id }}">
+            <div class="felder">
+              <div><label>Nr.</label><input name="nr" value="{{ e.nr }}"></div>
+              <div><label>Lage</label><input name="lage" value="{{ e.lage }}"></div>
+              <div><label>Art</label><select name="art">{% for a in ['Wohnung','Gewerbe','Stellplatz','Sonstiges'] %}<option {{ 'selected' if e.art == a }}>{{ a }}</option>{% endfor %}</select></div>
+              <div><label>Wohnfläche m²</label><input name="wohnflaeche" value="{{ e.wohnflaeche|zahl }}"></div>
+              <div><label>MEA</label><input name="mea" value="{{ e.mea|zahl }}"></div>
+            </div>
+            <p class="zeile"><button class="klein">Speichern</button></p>
+          </form>
+          <form method="post" action="/g/{{ g.id }}/eigentuemer">
+            <input type="hidden" name="einheit_id" value="{{ e.id }}">
+            <h3>Eigentümerwechsel</h3>
+            <div class="felder">
+              <div><label>Neuer Eigentümer (vorhanden)</label><select name="person_id"><option value="">– neu anlegen –</option>{% for p in personen %}<option value="{{ p.id }}">{{ p.firma or (p.nachname ~ ', ' ~ p.vorname) }}</option>{% endfor %}</select></div>
+              <div><label>Nachname</label><input name="nachname"></div>
+              <div><label>Vorname</label><input name="vorname"></div>
+              <div><label>Übergang am</label><input type="date" name="von"></div>
+            </div>
+            <input type="hidden" name="wechsel" value="1">
+            <p class="hinweis">Die bisherigen Eigentümer enden am Vortag. Weitere Angaben (Anschrift, E-Mail, Telefon, Lastschrift) danach auf der Seite des Eigentümers.</p>
+            <p class="zeile"><button class="klein zweit">Wechsel eintragen</button></p>
+          </form>
+          <form method="post" action="/g/{{ g.id }}/einheit/{{ e.id }}/loeschen"><button class="klein gefahr">Einheit löschen</button></form>
+        </details>
+      </td>
+    </tr>
+    {% else %}<tr><td colspan="9" class="leer">Noch keine Einheiten.</td></tr>{% endfor %}
+    {% if einheiten %}<tr class="summe"><td colspan="4">Summe</td><td class="zahl {{ 'rot' if summe_mea and (summe_mea|round(3)) not in (1000, 10000, 100000) }}">{{ summe_mea|zahl }}</td><td colspan="4"></td></tr>{% endif %}
+  </table></div>
+</section>
+
+<div class="raster">
+<section class="karte">
+  <h2>Neue Einheit</h2>
+  <form method="post" action="/g/{{ g.id }}/einheit">
+    <div class="felder">
+      <div><label for="e_nr">Nr.</label><input id="e_nr" name="nr" placeholder="W 01" required></div>
+      <div><label for="e_lage">Lage</label><input id="e_lage" name="lage" placeholder="EG links"></div>
+      <div><label for="e_art">Art</label><select id="e_art" name="art"><option>Wohnung</option><option>Gewerbe</option><option>Stellplatz</option><option>Sonstiges</option></select></div>
+      <div><label for="e_wf">Wohnfläche m²</label><input id="e_wf" name="wohnflaeche" inputmode="decimal"></div>
+      <div><label for="e_mea">MEA</label><input id="e_mea" name="mea" inputmode="decimal"></div>
+    </div>
+    <p><button>Einheit anlegen</button></p>
+  </form>
+</section>
+<section class="karte">
+  <h2>Eigentümer zuordnen</h2>
+  <form method="post" action="/g/{{ g.id }}/eigentuemer">
+    <div class="felder">
+      <div><label>Einheit</label><select name="einheit_id" required>{% for e in einheiten %}<option value="{{ e.id }}">{{ e.nr }} {{ e.lage }}</option>{% endfor %}</select></div>
+      <div><label>Vorhandene Person</label><select name="person_id"><option value="">– neu anlegen –</option>{% for p in personen %}<option value="{{ p.id }}">{{ p.firma or (p.nachname ~ ', ' ~ p.vorname) }}</option>{% endfor %}</select></div>
+      <div><label>Eigentümer seit</label><input type="date" name="von"></div>
+    </div>
+    <details class="form"><summary>Neue Person eintragen</summary>
+      <div class="felder">
+        <div><label>Anrede</label><input name="anrede" placeholder="Frau / Herr"></div>
+        <div><label>Vorname</label><input name="vorname"></div>
+        <div><label>Nachname</label><input name="nachname"></div>
+        <div><label>Firma</label><input name="firma"></div>
+        <div><label>Straße</label><input name="strasse"></div>
+        <div><label>PLZ</label><input name="plz"></div>
+        <div><label>Ort</label><input name="ort"></div>
+        <div><label>E-Mail</label><input name="email" type="email"></div>
+        <div><label>Telefon</label><input name="telefon"></div>
+        <div><label>Versand</label><select name="versand"><option value="email">E-Mail</option><option value="post">Post</option><option value="portal">Eigentümerportal</option></select></div>
+        <div><label>Hausgeld</label><select name="zahlweise"><option value="ueberweisung">Überweisung</option><option value="lastschrift">Lastschrift</option></select></div>
+        <div><label>IBAN</label><input name="iban"></div>
+        <div><label>Mandatsreferenz</label><input name="mandat_ref"></div>
+        <div><label>Mandat unterschrieben am</label><input type="date" name="mandat_datum"></div>
+      </div>
+    </details>
+    <p><button>Zuordnen</button></p>
+  </form>
+</section>
+</div>
+
+{% elif tab == 'konten' %}
+<section class="karte eng">
+  <div class="scroll"><table>
+    <tr><th>Art</th><th>Bank</th><th>IBAN</th><th>Zugang</th><th>Letzter Abruf</th><th class="zahl">Saldo heute</th><th></th></tr>
+    {% for k in konten %}
+    <tr><td>{{ 'Rücklage' if k.art == 'ruecklage' else 'Hausgeld' }}</td><td>{{ k.bank }}</td><td style="white-space:nowrap">{{ k.iban }}</td>
+        <td><span class="chip {{ 'ok' if k.zugang == 'fints' else 'info' }}">{{ {'fints':'FinTS','finapi':'finAPI','datei':'Datei-Import'}[k.zugang] }}</span></td>
+        <td class="muted">{{ k.letzter_abruf|datum }}</td><td class="zahl">{{ k.saldo|eur }}</td>
+        <td><details class="form"><summary>bearbeiten</summary>{% with k=k %}{% include "_konto_form.html" %}{% endwith %}</details></td></tr>
+    {% else %}<tr><td colspan="7" class="leer">Noch keine Konten.</td></tr>{% endfor %}
+  </table></div>
+</section>
+<section class="karte"><h2>Neues Konto</h2>{% with k=None %}{% include "_konto_form.html" %}{% endwith %}</section>
+
+{% elif tab == 'kostenarten' %}
+<section class="karte eng">
+  <div class="scroll"><table>
+    <tr><th>#</th><th>Kostenart</th><th>Verteilerschlüssel</th><th>Stichworte für Bankumsätze</th><th></th></tr>
+    {% for k in kostenarten %}
+    <tr>
+      <td style="width:70px"><input form="ka{{ k.id }}" name="reihenfolge" value="{{ k.reihenfolge }}" aria-label="Reihenfolge"></td>
+      <td><input form="ka{{ k.id }}" name="name" value="{{ k.name }}" aria-label="Name"></td>
+      <td><select form="ka{{ k.id }}" name="schluessel" aria-label="Schlüssel">{% for s, t in SCHLUESSEL.items() %}<option value="{{ s }}" {{ 'selected' if k.schluessel == s }}>{{ t }}</option>{% endfor %}</select>
+        {% if k.schluessel == 'verbrauch' %}<div class="klein"><a href="/g/{{ g.id }}/verbrauch/{{ k.id }}/{{ jahr - 1 }}">Verbrauch {{ jahr - 1 }} eintragen</a></div>{% endif %}
+        {% if k.schluessel == 'heizung' %}<div class="klein"><a href="/g/{{ g.id }}/heizkosten/{{ jahr - 1 }}">Heizkosten {{ jahr - 1 }}</a></div>{% endif %}</td>
+      <td><input form="ka{{ k.id }}" name="stichworte" value="{{ k.stichworte }}" aria-label="Stichworte"></td>
+      <td class="zeile">
+        <form id="ka{{ k.id }}" method="post" action="/g/{{ g.id }}/kostenart" class="inline"><input type="hidden" name="id" value="{{ k.id }}"><button class="klein zweit">Speichern</button></form>
+        <form method="post" action="/g/{{ g.id }}/kostenart/{{ k.id }}/loeschen" class="inline"><button class="klein gefahr" aria-label="Löschen">✕</button></form></td>
+    </tr>
+    {% endfor %}
+  </table></div>
+</section>
+<section class="karte"><h2>Neue Kostenart</h2>
+  <form method="post" action="/g/{{ g.id }}/kostenart"><div class="felder">
+    <div><label>Name</label><input name="name" required></div>
+    <div><label>Schlüssel</label><select name="schluessel">{% for s, t in SCHLUESSEL.items() %}<option value="{{ s }}">{{ t }}</option>{% endfor %}</select></div>
+    <div><label>Stichworte</label><input name="stichworte" placeholder="z. B. aufzug, lift"></div>
+  </div><p><button>Anlegen</button></p></form>
+</section>
+
+{% elif tab == 'finanzen' %}
+<section class="karte eng">
+  <table>
+    <tr><th>Jahr</th><th>Wirtschaftsplan</th><th>Jahresabrechnung</th><th>Heizkosten</th></tr>
+    {% for j in jahre %}
+    <tr><td><b>{{ j }}</b></td>
+      <td><a href="/g/{{ g.id }}/wirtschaftsplan/{{ j }}">{{ 'öffnen' if wps.get(j) else 'anlegen' }}</a>
+        {% if wps.get(j) and wps[j].beschlossen_am %} <span class="chip ok">beschlossen {{ wps[j].beschlossen_am|datum }}</span>{% elif wps.get(j) %} <span class="chip warnung">Entwurf</span>{% endif %}</td>
+      <td>{% if j <= jahr %}<a href="/g/{{ g.id }}/abrechnung/{{ j }}">öffnen</a>{% else %}<span class="muted">–</span>{% endif %}</td>
+      <td>{% if j <= jahr %}<a href="/g/{{ g.id }}/heizkosten/{{ j }}">{{ 'Messdienst-Datei' if g.heizkosten_modus == 'messdienst' else 'Verbrauch' }}</a>{% endif %}</td></tr>
+    {% endfor %}
+  </table>
+</section>
+
+{% elif tab == 'beschluesse' %}
+<section class="karte eng">
+  <h2>Beschlusssammlung (§ 24 Abs. 7 WEG)</h2>
+  <div class="scroll"><table>
+    <tr><th>Nr.</th><th>Datum</th><th>Art</th><th>Wortlaut</th><th>Ergebnis</th><th>Vermerke</th></tr>
+    {% for b in beschluesse %}
+    <tr><td><b>{{ b.lfd }}</b></td><td style="white-space:nowrap">{{ b.datum|datum }}</td><td>{{ {'versammlung':'Versammlung','umlauf':'Umlaufbeschluss','urteil':'Urteil'}.get(b.art, b.art) }}</td>
+        <td>{{ b.text }}</td><td>{{ b.ergebnis }}</td>
+        <td class="klein" style="white-space:pre-line">{{ b.vermerk }}
+          <details class="form"><summary>Vermerk</summary><form method="post" action="/beschluss/{{ b.id }}/vermerk"><input name="vermerk" placeholder="z. B. angefochten, Az. …"><button class="klein">Eintragen</button></form></details></td></tr>
+    {% else %}<tr><td colspan="6" class="leer">Noch keine Beschlüsse.</td></tr>{% endfor %}
+  </table></div>
+</section>
+<section class="karte"><h2>Umlaufbeschluss oder Urteil eintragen</h2>
+  <form method="post" action="/g/{{ g.id }}/beschluss"><div class="felder">
+    <div><label>Datum</label><input type="date" name="datum" required></div>
+    <div><label>Art</label><select name="art"><option value="umlauf">Umlaufbeschluss</option><option value="urteil">Urteil</option></select></div>
+    <div><label>Ergebnis</label><input name="ergebnis"></div>
+  </div><label>Wortlaut</label><textarea name="text" required></textarea><p><button>Eintragen</button></p></form>
+</section>
+
+{% elif tab == 'vorgaenge' %}
+<section class="karte eng"><div class="scroll"><table>
+  <tr><th>Angelegt</th><th>Vorgang</th><th>Einheit</th><th>Quelle</th><th>Status</th></tr>
+  {% for v in vorgaenge %}
+  <tr><td class="muted" style="white-space:nowrap">{{ v.angelegt|datum }}</td><td>{% if v.notfallart %}<span class="chip fehler">Notfall</span> {% endif %}<b>{{ v.titel }}</b><div class="klein muted">{{ v.text }}</div></td>
+      <td>{{ v.e_nr or '' }}</td><td>{{ v.quelle }}</td>
+      <td><form method="post" action="/vorgang/{{ v.id }}/status"><input type="hidden" name="status" value="{{ 'offen' if v.status == 'erledigt' else 'erledigt' }}"><button class="klein zweit">{{ 'wieder öffnen' if v.status == 'erledigt' else 'erledigt' }}</button></form></td></tr>
+  {% else %}<tr><td colspan="5" class="leer">Keine Vorgänge.</td></tr>{% endfor %}
+</table></div></section>
+
+{% elif tab == 'einstellungen' %}
+<section class="karte">
+  <form method="post" action="/g/{{ g.id }}/einstellungen">
+    <div class="felder">
+      <div><label>Nr.</label><input name="nr" value="{{ g.nr }}"></div>
+      <div style="grid-column: span 2"><label>Name</label><input name="name" value="{{ g.name }}"></div>
+      <div><label>Straße</label><input name="strasse" value="{{ g.strasse }}"></div>
+      <div><label>PLZ</label><input name="plz" value="{{ g.plz }}"></div>
+      <div><label>Ort</label><input name="ort" value="{{ g.ort }}"></div>
+      <div><label>Verwaltet seit</label><input type="date" name="verwalter_seit" value="{{ g.verwalter_seit }}"></div>
+      <div><label>SEPA-Gläubiger-ID</label><input name="glaeubiger_id" value="{{ g.glaeubiger_id }}" placeholder="DE98ZZZ09999999999"></div>
+    </div>
+    <h3>Heizkosten</h3>
+    <div class="felder">
+      <div><label>Verteilung</label><select name="heizkosten_modus">
+        <option value="messdienst" {{ 'selected' if g.heizkosten_modus == 'messdienst' }}>Abrechnung des Messdienstes einlesen</option>
+        <option value="selbst" {{ 'selected' if g.heizkosten_modus == 'selbst' }}>selbst nach HeizkostenV verteilen</option></select></div>
+      <div><label>Grundkostenanteil (30–50 %)</label><input name="heiz_grundanteil" value="{{ g.heiz_grundanteil }}" inputmode="numeric"></div>
+    </div>
+    <h3>Versammlung</h3>
+    <div class="felder">
+      <div><label>Stimmrecht</label><select name="stimmprinzip">
+        <option value="kopf" {{ 'selected' if g.stimmprinzip == 'kopf' }}>Kopfprinzip (Gesetz)</option>
+        <option value="objekt" {{ 'selected' if g.stimmprinzip == 'objekt' }}>je Einheit (Teilungserklärung)</option>
+        <option value="mea" {{ 'selected' if g.stimmprinzip == 'mea' }}>nach MEA (Teilungserklärung)</option></select></div>
+    </div>
+    <label class="haken"><input type="checkbox" name="hybrid_erlaubt" {{ 'checked' if g.hybrid_erlaubt }}> Online-Teilnahme ist beschlossen (§ 23 Abs. 1a WEG)</label>
+    <label>Notiz</label><textarea name="notiz">{{ g.notiz }}</textarea>
+    <p><button>Speichern</button></p>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

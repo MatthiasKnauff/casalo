@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block titel %}Übersicht{% endblock %}
+{% block inhalt %}
+<div class="kopf">
+  <div><h1>Übersicht</h1><p class="unter">{{ heute.strftime('%d.%m.%Y') }}</p></div>
+  <form action="/personen" class="zeile"><label for="q" style="position:absolute;left:-9999px">Suche</label>
+    <input id="q" name="q" type="search" placeholder="Eigentümer suchen …" style="width:260px"></form>
+</div>
+
+<div class="kz">
+  <a class="karte" href="/gemeinschaften"><span class="muted klein">Gemeinschaften</span><span class="wert">{{ kz.gemeinschaften }}</span><span class="muted klein">{{ kz.einheiten }} Einheiten</span></a>
+  <a class="karte" href="/vorgaenge"><span class="muted klein">Offene Vorgänge</span><span class="wert">{{ kz.vorgaenge }}</span><span class="muted klein">aus Telefon und Büro</span></a>
+  <a class="karte" href="/bank"><span class="muted klein">Bankumsätze zu prüfen</span><span class="wert">{{ kz.umsaetze }}</span><span class="muted klein">sichere Treffer sind schon gebucht</span></a>
+  <div class="karte"><span class="muted klein">Hausgeld-Rückstände</span><span class="wert {{ 'rot' if kz.rueckstaende }}">{{ kz.rueckstaende }}</span><span class="muted klein">Einheiten, zusammen {{ kz.rueckstand_summe|eur }}</span></div>
+</div>
+
+{% for k in konten_tan %}
+<div class="meldung warnung">Bank verlangt eine Freigabe: {{ k.g_name }} · {{ k.bank }} – <a href="/bank">jetzt bestätigen</a></div>
+{% endfor %}
+
+<div class="raster">
+  <section class="karte eng">
+    <h2 class="zeile">Heute am KI-Telefon <a class="rechts klein" href="/telefon">alle Anrufe</a></h2>
+    {% if anrufe %}
+    <div class="scroll"><table>
+      <tr><th>Zeit</th><th>Anrufer</th><th>Anliegen</th><th>Status</th></tr>
+      {% for a in anrufe %}
+      <tr><td class="muted">{{ a.beginn[11:16] }}</td>
+          <td><a href="/anruf/{{ a.id }}">{{ a.firma or ((a.vorname ~ ' ' ~ a.nachname).strip()) or a.nummer or 'unbekannt' }}</a></td>
+          <td>{{ a.anliegen or '–' }}</td>
+          <td><span class="chip {{ 'fehler' if a.status == 'rueckruf' else 'ok' if a.status in ('vorgang','beantwortet') else 'info' }}">{{ {'laeuft':'läuft','beantwortet':'beantwortet','vorgang':'Vorgang','rueckruf':'Rückruf nötig','weitergeleitet':'weitergeleitet'}.get(a.status, a.status) }}</span></td></tr>
+      {% endfor %}
+    </table></div>
+    {% else %}<p class="leer">Heute noch keine Anrufe.</p>{% endif %}
+  </section>
+
+  <section class="karte eng">
+    <h2>Fristen</h2>
+    {% if fristen %}
+    <table>
+      {% for x in fristen %}
+      <tr><td style="white-space:nowrap;font-weight:600">{{ x.datum.strftime('%d.%m.%Y') }}</td>
+          <td><a href="{{ x.link }}">{{ x.was }}</a></td>
+          <td><span class="chip {{ x.art }}">{{ {'ok':'im Plan','warnung':'bald','fehler':'überfällig'}[x.art] }}</span></td></tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="leer">Keine anstehenden Fristen.</p>{% endif %}
+  </section>
+
+  <section class="karte eng">
+    <h2 class="zeile">Offene Vorgänge <a class="rechts klein" href="/vorgaenge">alle</a></h2>
+    {% if vorgaenge %}
+    <table>
+      {% for v in vorgaenge %}
+      <tr><td>{% if v.notfallart %}<span class="chip fehler">Notfall</span> {% endif %}{{ v.titel }}<div class="muted klein">{{ v.g_name or '' }}{% if v.rueckruf_bis %} · Rückruf bis {{ v.rueckruf_bis|datum }}{% endif %}</div></td>
+          <td class="muted klein" style="white-space:nowrap">{{ v.angelegt|datum }}</td></tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="leer">Nichts offen.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block titel %}{{ p.firma or p.nachname }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/personen">Eigentümer</a></p>
+  <h1>{{ p.firma or ((p.vorname ~ ' ' ~ p.nachname).strip()) }}</h1>
+  <p class="unter">{% for t in eigentum if t.bis is none %}<a href="/g/{{ t.gid }}">{{ t.g_name }}</a> · {{ t.nr }}{{ ' · ' if not loop.last }}{% else %}keine aktuelle Einheit{% endfor %}</p>
+</div></div>
+<form method="post" class="karte">
+  <div class="felder">
+    <div><label>Anrede</label><input name="anrede" value="{{ p.anrede }}"></div>
+    <div><label>Vorname</label><input name="vorname" value="{{ p.vorname }}"></div>
+    <div><label>Nachname</label><input name="nachname" value="{{ p.nachname }}"></div>
+    <div><label>Firma</label><input name="firma" value="{{ p.firma }}"></div>
+    <div><label>Straße</label><input name="strasse" value="{{ p.strasse }}"></div>
+    <div><label>PLZ</label><input name="plz" value="{{ p.plz }}"></div>
+    <div><label>Ort</label><input name="ort" value="{{ p.ort }}"></div>
+    <div><label>E-Mail</label><input name="email" type="email" value="{{ p.email }}"></div>
+    <div><label>Telefon</label><input name="telefon" value="{{ p.telefon }}"></div>
+    <div><label>Telefon 2</label><input name="telefon2" value="{{ p.telefon2 }}"></div>
+  </div>
+  <p class="hinweis">Über die Telefonnummern erkennt das KI-Telefon den Anrufer (dazu immer eine Rückfrage nach Einheit und Postleitzahl).</p>
+  <h3>Versand und Hausgeld</h3>
+  <div class="felder">
+    <div><label>Versand von Abrechnungen und Einladungen</label><select name="versand">
+      <option value="email" {{ 'selected' if p.versand == 'email' }}>E-Mail (Standard)</option>
+      <option value="post" {{ 'selected' if p.versand == 'post' }}>Post</option>
+      <option value="portal" {{ 'selected' if p.versand == 'portal' }}>Eigentümerportal (bis dahin E-Mail)</option></select></div>
+    <div><label>Hausgeld</label><select name="zahlweise">
+      <option value="ueberweisung" {{ 'selected' if p.zahlweise == 'ueberweisung' }}>überweist selbst</option>
+      <option value="lastschrift" {{ 'selected' if p.zahlweise == 'lastschrift' }}>SEPA-Lastschrift</option></select></div>
+    <div><label>IBAN</label><input name="iban" value="{{ p.iban }}"></div>
+    <div><label>BIC</label><input name="bic" value="{{ p.bic }}"></div>
+    <div><label>Mandatsreferenz</label><input name="mandat_ref" value="{{ p.mandat_ref }}"></div>
+    <div><label>Mandat unterschrieben am</label><input type="date" name="mandat_datum" value="{{ p.mandat_datum }}"></div>
+  </div>
+  <label>Notiz</label><textarea name="notiz">{{ p.notiz }}</textarea>
+  <p><button>Speichern</button></p>
+</form>
+<section class="karte eng"><h2>Einheiten</h2><table>
+  <tr><th>Gemeinschaft</th><th>Einheit</th><th>von</th><th>bis</th><th></th></tr>
+  {% for t in eigentum %}<tr><td><a href="/g/{{ t.gid }}">{{ t.g_name }}</a></td><td>{{ t.nr }} {{ t.lage }}</td><td>{{ t.von|datum }}</td><td>{{ t.bis|datum if t.bis else 'aktuell' }}</td>
+    <td><form method="post" action="/eigentum/{{ t.id }}/entfernen"><button class="klein gefahr">Zuordnung entfernen</button></form></td></tr>
+  {% else %}<tr><td colspan="5" class="leer">Keine.</td></tr>{% endfor %}
+</table></section>
+{% endblock %}

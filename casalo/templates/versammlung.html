@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block titel %}Versammlung {{ v.beginn|datum }}{% endblock %}
+{% block inhalt %}
+{% set fertig = v.status == 'durchgefuehrt' %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/versammlungen">Versammlungen</a> › <a href="/g/{{ g.id }}">WEG {{ g.name }}</a></p>
+  <h1>Eigentümerversammlung {{ v.beginn|datum }} Uhr</h1>
+  <p class="unter">{{ v.ort }}{% if v.hybrid %} · auch online{% endif %} · {{ anzahl }} Eigentümer ({{ wege.email }} per E-Mail, {{ wege.post }} per Post)</p></div>
+  <div class="zeile">
+    <a class="knopf zweit" href="/versammlung/{{ v.id }}/einladung.pdf" target="_blank">Einladung (PDF)</a>
+    {% if wege.post %}<a class="knopf zweit" href="/versammlung/{{ v.id }}/einladung.pdf?post=1" target="_blank">Für die Post ({{ wege.post }})</a>{% endif %}
+    {% if not fertig %}<form method="post" action="/versammlung/{{ v.id }}/einladen"><button>{{ 'Erneut einladen' if v.einladung_versandt else 'Einladung versenden' }}</button></form>{% endif %}
+  </div>
+</div>
+{% if not fertig %}<div class="meldung {{ frist[0] }}">{{ frist[1] }}</div>{% endif %}
+
+<section class="karte" id="daten">
+  <form method="post" action="/versammlung/{{ v.id }}"><div class="felder">
+    <div><label>Datum</label><input type="date" name="datum" value="{{ v.beginn[:10] }}"></div>
+    <div><label>Uhrzeit</label><input type="time" name="uhrzeit" value="{{ v.beginn[11:16] }}"></div>
+    <div><label>Art</label><select name="art"><option value="ordentlich" {{ 'selected' if v.art == 'ordentlich' }}>ordentlich</option><option value="ausserordentlich" {{ 'selected' if v.art != 'ordentlich' }}>außerordentlich</option></select></div>
+    <div style="grid-column: span 2"><label>Ort</label><input name="ort" value="{{ v.ort }}"></div>
+  </div>
+  {% if g.hybrid_erlaubt %}
+  <label class="haken"><input type="checkbox" name="hybrid" {{ 'checked' if v.hybrid }}> Online-Teilnahme</label>
+  <label>Videolink</label><input name="videolink" value="{{ v.videolink }}">
+  {% else %}<p class="hinweis">Online-Teilnahme ist für diese Gemeinschaft nicht beschlossen (<a href="/g/{{ g.id }}?tab=einstellungen">Einstellungen</a>).</p><input type="hidden" name="videolink" value="{{ v.videolink }}">{% endif %}
+  <label>Notizen zur Niederschrift (Anwesenheit, Versammlungsleitung, Besonderheiten)</label>
+  <textarea name="protokoll">{{ v.protokoll }}</textarea>
+  <p><button class="zweit">Speichern</button></p></form>
+</section>
+
+<section class="karte eng" id="tops"><h2>Tagesordnung und Abstimmung</h2>
+<form method="post" action="/versammlung/{{ v.id }}/abstimmung" id="abstimmung">
+<div class="scroll"><table>
+  <tr><th>TOP</th><th>Gegenstand und Beschlussvorschlag</th><th>Mehrheit</th><th class="zahl">Ja</th><th class="zahl">Nein</th><th class="zahl">Enth.</th><th>Ergebnis</th></tr>
+  {% for t in tops %}
+  <tr><td><b>{{ t.nr }}</b></td>
+    <td><b>{{ t.titel }}</b><div class="klein muted">{{ t.vorschlag }}</div>
+      {% if not fertig %}<details class="form"><summary class="klein">bearbeiten</summary>
+        <input form="top{{ t.id }}" name="titel" value="{{ t.titel }}" aria-label="Titel">
+        <textarea form="top{{ t.id }}" name="vorschlag" aria-label="Beschlussvorschlag">{{ t.vorschlag }}</textarea>
+        <select form="top{{ t.id }}" name="mehrheit" aria-label="Mehrheit">{% for m, txt in MEHRHEITEN.items() %}<option value="{{ m }}" {{ 'selected' if t.mehrheit == m }}>{{ txt }}</option>{% endfor %}</select>
+        <div class="zeile" style="margin-top:6px"><button form="top{{ t.id }}" class="klein">Speichern</button><button form="top{{ t.id }}" name="loeschen" value="1" class="klein gefahr">Löschen</button></div>
+      </details>{% endif %}</td>
+    <td class="klein">{{ MEHRHEITEN[t.mehrheit] }}</td>
+    {% if t.mehrheit == 'keine' %}<td colspan="4"></td>{% else %}
+    <td class="zahl" style="width:80px"><input name="ja_{{ t.id }}" value="{{ t.ja|zahl }}" aria-label="Ja" {{ 'disabled' if fertig }}></td>
+    <td class="zahl" style="width:80px"><input name="nein_{{ t.id }}" value="{{ t.nein|zahl }}" aria-label="Nein" {{ 'disabled' if fertig }}></td>
+    <td class="zahl" style="width:80px"><input name="enthaltung_{{ t.id }}" value="{{ t.enthaltung|zahl }}" aria-label="Enthaltungen" {{ 'disabled' if fertig }}>
+      {% if t.mehrheit == 'doppelt' %}<input name="ja_mea_{{ t.id }}" value="{{ t.ja_mea|zahl }}" placeholder="MEA Ja" aria-label="MEA der Ja-Stimmen" style="margin-top:4px" {{ 'disabled' if fertig }}>{% endif %}</td>
+    <td>{% if t.ergebnis %}<span class="chip {{ 'ok' if t.ergebnis == 'angenommen' else 'fehler' }}">{{ t.ergebnis }}</span>{% endif %}
+      {% if t.beschluss_id and beschluesse.get(t.beschluss_id) %}<div class="klein muted">Nr. {{ beschluesse[t.beschluss_id].lfd }}</div>{% endif %}</td>
+    {% endif %}
+  </tr>
+  {% endfor %}
+</table></div>
+{% if not fertig %}<p class="zeile" style="padding:0 10px"><button class="zweit">Abstimmung speichern</button>
+  <span class="hinweis">Stimmrecht: {{ {'kopf':'je Eigentümer (Kopfprinzip)','objekt':'je Einheit','mea':'nach MEA'}[g.stimmprinzip] }} · MEA gesamt {{ gesamt_mea|zahl }}</span></p>{% endif %}
+</form>
+{% for t in tops %}<form id="top{{ t.id }}" method="post" action="/versammlung/{{ v.id }}/top"><input type="hidden" name="id" value="{{ t.id }}"></form>{% endfor %}
+</section>
+
+{% if not fertig %}
+<section class="karte"><h2>Neuer Tagesordnungspunkt</h2>
+  <form method="post" action="/versammlung/{{ v.id }}/top">
+    <label>Gegenstand</label><input name="titel" required>
+    <label>Beschlussvorschlag</label><textarea name="vorschlag"></textarea>
+    <label>Mehrheit</label><select name="mehrheit">{% for m, txt in MEHRHEITEN.items() %}<option value="{{ m }}" {{ 'selected' if m == 'einfach' }}>{{ txt }}</option>{% endfor %}</select>
+    <p><button class="zweit">Hinzufügen</button></p>
+  </form>
+</section>
+{% endif %}
+
+<section class="karte"><div class="zeile">
+  <a class="knopf zweit" href="/versammlung/{{ v.id }}/niederschrift.pdf" target="_blank">Niederschrift (PDF)</a>
+  {% if not fertig %}<form method="post" action="/versammlung/{{ v.id }}/abschliessen" class="rechts"><button>Versammlung abschließen und Beschlüsse eintragen</button></form>
+  {% else %}<span class="chip ok rechts">abgeschlossen – Beschlüsse stehen in der <a href="/g/{{ g.id }}?tab=beschluesse">Beschlusssammlung</a></span>{% endif %}
+</div></section>
+{% endblock %}

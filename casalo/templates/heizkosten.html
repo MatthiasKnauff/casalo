@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block titel %}Heizkosten {{ jahr }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}?tab=finanzen">WEG {{ g.name }}</a></p>
+  <h1>Heizkosten {{ jahr }}</h1>
+  <p class="unter">{% if feld == 'betrag_cent' %}Abrechnung des Messdienstes – Kosten je Einheit{% else %}selbst nach HeizkostenV: {{ g.heiz_grundanteil }} % Grundkosten nach Wohnfläche, Rest nach Verbrauch{% endif %}
+  · <a href="/g/{{ g.id }}?tab=einstellungen">umstellen</a></p></div>
+</div>
+<section class="karte">
+  <div class="zeile"><span>Gebuchte Heizkosten {{ jahr }}: <b>{{ kosten|eur }}</b></span>
+  {% if summe is not none %}<span class="rechts">Messdienst verteilt: <b class="{{ 'rot' if summe != kosten }}">{{ summe|eur }}</b></span>{% endif %}</div>
+</section>
+<form method="post" enctype="multipart/form-data" class="karte">
+  <h2>Datei einlesen</h2>
+  <p class="hinweis">CSV mit Einheit in der ersten und {{ 'Betrag in Euro' if feld == 'betrag_cent' else 'Verbrauchseinheiten' }} in der letzten Spalte (Export des Messdienstes, z. B. Techem, ista, Brunata). Kopfzeilen werden übersprungen.</p>
+  <div class="zeile"><input type="file" name="datei" accept=".csv,.txt" style="max-width:360px" aria-label="Datei"><button class="zweit">Einlesen</button></div>
+</form>
+<form method="post" class="karte eng">
+  <table>
+    <tr><th>Einheit</th><th>Lage</th><th class="zahl">Wohnfläche</th><th class="zahl">{{ 'Kosten laut Messdienst' if feld == 'betrag_cent' else 'Verbrauch' }}</th></tr>
+    {% for e in einheiten %}
+    <tr><td><b>{{ e.nr }}</b></td><td>{{ e.lage }}</td><td class="zahl">{{ e.wohnflaeche|zahl }} m²</td>
+        <td class="zahl" style="width:180px"><input name="e_{{ e.id }}" style="text-align:right" aria-label="Wert {{ e.nr }}"
+          value="{{ (werte.get(e.id)|betrag) if feld == 'betrag_cent' else (werte.get(e.id)|zahl) }}"></td></tr>
+    {% endfor %}
+  </table>
+  <p style="padding:0 10px"><button>Speichern</button></p>
+</form>
+{% endblock %}

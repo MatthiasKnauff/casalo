@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block titel %}KI-Telefon{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div><h1>KI-Telefon</h1><p class="unter">Nimmt Anrufe an, beantwortet Fragen, legt Vorgänge an.</p></div>
+  {% if benutzer.rolle == 'admin' %}<a class="knopf zweit" href="/telefon/einstellungen">Einstellungen &amp; Notfallregeln</a>{% endif %}</div>
+<section class="karte eng"><div class="scroll"><table>
+  <tr><th>Zeit</th><th>Dauer</th><th>Anrufer</th><th>Erkannt</th><th>Anliegen</th><th>Ergebnis</th></tr>
+  {% for a in anrufe %}
+  <tr><td style="white-space:nowrap"><a href="/anruf/{{ a.id }}">{{ a.beginn|datum }}</a></td><td class="muted">{{ (a.dauer_s // 60) }}:{{ '%02d' % (a.dauer_s % 60) }}</td>
+      <td>{{ a.firma or ((a.vorname or '') ~ ' ' ~ (a.nachname or '')).strip() or a.nummer or 'unterdrückt' }}</td>
+      <td><span class="chip {{ 'ok' if a.identifiziert == 'eindeutig' else 'info' if a.identifiziert == 'nummer' else 'warnung' }}">{{ {'eindeutig':'eindeutig','nummer':'Rufnummer','nein':'unbekannt'}[a.identifiziert] }}</span></td>
+      <td>{{ a.anliegen or a.v_titel or '–' }}</td>
+      <td><span class="chip {{ 'fehler' if a.status == 'rueckruf' else 'ok' if a.status in ('vorgang','beantwortet') else 'info' }}">{{ {'laeuft':'läuft','beantwortet':'beantwortet','vorgang':'Vorgang angelegt','rueckruf':'Rückruf nötig','weitergeleitet':'weitergeleitet'}.get(a.status, a.status) }}</span></td></tr>
+  {% else %}<tr><td colspan="6" class="leer">Noch keine Anrufe. Der Telefon-Container meldet sich hier, sobald er läuft.</td></tr>{% endfor %}
+</table></div></section>
+{% endblock %}

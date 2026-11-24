@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block titel %}Bank & Hausgeld{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div><h1>Bank &amp; Hausgeld</h1><p class="unter">Umsätze abrufen oder einlesen, zuordnen – sichere Treffer bucht Casalo selbst ({{ gebucht }} bisher).</p></div></div>
+{% if not produkt_id %}<div class="meldung warnung">Für den FinTS-Abruf fehlt noch die Produkt-ID der Deutschen Kreditwirtschaft (<a href="/einstellungen">Einstellungen</a>). Bis dahin: Kontoauszüge als CAMT- oder CSV-Datei einlesen.</div>{% endif %}
+
+{% for k in konten if k.fints_zustand %}
+<div class="karte" style="border-color:var(--warn-line)">
+  <h2>Freigabe: {{ k.g_name }} · {{ k.bank }}</h2>
+  <p>{{ k.tan_hinweis or 'Die Bank verlangt eine Freigabe.' }}</p>
+  <form method="post" action="/bank/konto/{{ k.id }}/abruf" class="zeile">
+    <input name="tan" placeholder="TAN (bei pushTAN leer lassen)" style="max-width:260px" autocomplete="one-time-code" aria-label="TAN">
+    <button>Freigegeben – weiter</button>
+  </form>
+  <form method="post" action="/bank/konto/{{ k.id }}/tan-verwerfen" style="margin-top:8px"><button class="klein zweit">Abbrechen</button></form>
+</div>
+{% endfor %}
+
+<section class="karte eng"><h2>Zu prüfen ({{ umsaetze|length }})</h2><div class="scroll"><table>
+  <tr><th>Datum</th><th>Konto</th><th>Auftraggeber · Verwendungszweck</th><th class="zahl">Betrag</th><th>Zuordnung</th><th></th></tr>
+  {% for u in umsaetze %}{% set aw = auswahl[u.gemeinschaft_id] %}
+  <tr>
+    <td style="white-space:nowrap">{{ u.datum|datum }}</td>
+    <td class="klein">{{ u.g_name }}<br><span class="muted">{{ 'Rücklage' if u.konto_art == 'ruecklage' else 'Hausgeld' }}</span></td>
+    <td><b>{{ u.name }}</b><div class="klein muted">{{ u.zweck }}</div></td>
+    <td class="zahl {{ 'gruen' if u.betrag_cent > 0 }}">{{ u.betrag_cent|eur }}</td>
+    <td style="min-width:230px">
+      <form method="post" action="/bank/umsatz/{{ u.id }}" id="u{{ u.id }}">
+        <select name="ziel" aria-label="Zuordnung">
+          <option value="">– wählen –</option>
+          <optgroup label="Hausgeld der Einheit">{% for e in aw.einheiten %}<option value="e:{{ e.id }}" {{ 'selected' if u.v and u.v.einheit_id == e.id }}>{{ e.nr }} {{ e.lage }}</option>{% endfor %}</optgroup>
+          <optgroup label="Kostenart">{% for k in aw.kostenarten %}<option value="k:{{ k.id }}" {{ 'selected' if u.v and u.v.kostenart_id == k.id }}>{{ k.name }}</option>{% endfor %}</optgroup>
+          <option value="s">Sonstiges / Umbuchung</option>
+        </select>
+      </form>
+      {% if u.v %}<span class="chip {{ 'ok' if u.v.sicherheit == 'sicher' else 'warnung' if u.v.sicherheit == 'wahrscheinlich' else 'fehler' }}">{{ u.v.sicherheit }}</span>
+      <span class="klein muted">{{ u.v.gruende|join(', ') }}</span>{% else %}<span class="chip fehler">kein Vorschlag</span>{% endif %}
+    </td>
+    <td class="zeile"><button form="u{{ u.id }}" class="klein">Buchen</button><button form="u{{ u.id }}" name="ignorieren" value="1" class="klein zweit">ausblenden</button></td>
+  </tr>
+  {% else %}<tr><td colspan="6" class="leer">Alles zugeordnet.</td></tr>{% endfor %}
+</table></div></section>
+
+<div class="raster">
+<section class="karte eng"><h2>Konten</h2><div class="scroll"><table>
+  <tr><th>Gemeinschaft</th><th>Konto</th><th>Abruf</th><th class="zahl">Saldo</th><th></th></tr>
+  {% for k in konten %}
+  <tr><td>{{ k.g_name }}</td><td class="klein">{{ 'Rücklage' if k.art == 'ruecklage' else 'Hausgeld' }} · {{ k.bank }}<br><span class="muted">{{ k.iban }}</span></td>
+      <td class="klein">{{ {'fints':'FinTS','finapi':'finAPI (folgt)','datei':'Datei'}[k.zugang] }}{% if k.letzter_abruf %}<br><span class="muted">{{ k.letzter_abruf|datum }}</span>{% endif %}</td>
+      <td class="zahl">{{ k.saldo|eur }}</td>
+      <td>{% if k.zugang == 'fints' and not k.fints_zustand %}<form method="post" action="/bank/konto/{{ k.id }}/abruf"><button class="klein zweit">Abrufen</button></form>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="5" class="leer">Konten legen Sie bei der Gemeinschaft an.</td></tr>{% endfor %}
+</table></div></section>
+<section class="karte"><h2>Kontoauszug einlesen</h2>
+  <form method="post" action="/bank/import" enctype="multipart/form-data">
+    <label>Konto</label><select name="konto_id">{% for k in konten %}<option value="{{ k.id }}">{{ k.g_name }} · {{ 'Rücklage' if k.art == 'ruecklage' else 'Hausgeld' }} · {{ k.bank }}</option>{% endfor %}</select>
+    <label>Datei (CAMT.053 als XML oder CSV-Export der Bank)</label><input type="file" name="datei" accept=".xml,.csv,.txt">
+    <p class="hinweis">Doppelte Umsätze erkennt Casalo und überspringt sie.</p>
+    <p><button class="zweit">Einlesen</button></p>
+  </form>
+</section>
+</div>
+{% endblock %}

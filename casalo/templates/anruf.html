@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titel %}Anruf{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/telefon">KI-Telefon</a></p>
+  <h1>Anruf {{ a.beginn|datum }}</h1>
+  <p class="unter">{{ a.firma or ((a.vorname or '') ~ ' ' ~ (a.nachname or '')).strip() or 'unbekannt' }} · {{ a.nummer or 'Nummer unterdrückt' }}
+    · {{ {'eindeutig':'eindeutig erkannt' ~ (' (' ~ a.e_nr ~ ')' if a.e_nr else ''),'nummer':'über die Rufnummer erkannt','nein':'nicht erkannt'}[a.identifiziert] }}
+    · {{ a.dauer_s // 60 }}:{{ '%02d' % (a.dauer_s % 60) }} min</p></div></div>
+<div class="raster">
+<section class="karte"><h2>Gespräch</h2>
+  <div class="gespraech">{% for z in verlauf %}<div class="blase {{ 'ki' if z.wer == 'ki' else 'mensch' }}"><span class="wer">{{ 'KI' if z.wer == 'ki' else 'Anrufer' }}</span>{{ z.text }}</div>
+  {% else %}<p class="leer">Kein Verlauf gespeichert.</p>{% endfor %}</div>
+</section>
+<section class="karte"><h2>Ergebnis</h2>
+  {% if vorgang %}<p>Vorgang: <b>{{ vorgang.titel }}</b>{% if vorgang.notfallart %} <span class="chip fehler">Notfall</span>{% endif %}<br><span class="muted klein">Rückruf bis {{ vorgang.rueckruf_bis|datum }}</span></p>
+  <form method="post" action="/vorgang/{{ vorgang.id }}/status"><input type="hidden" name="status" value="{{ 'offen' if vorgang.status == 'erledigt' else 'erledigt' }}"><button class="zweit klein">{{ 'wieder öffnen' if vorgang.status == 'erledigt' else 'als erledigt markieren' }}</button></form>
+  {% else %}<p class="muted">Kein Vorgang angelegt.</p>{% endif %}
+  {% if a.weiterleitung %}<p>Weitergeleitet an {{ a.weiterleitung }}</p>{% endif %}
+  <h3>An die KI übermittelt (pseudonymisiert)</h3>
+  {% for k in ki %}<pre class="code">{{ k.inhalt }}</pre>{% else %}<p class="muted klein">Nichts protokolliert.</p>{% endfor %}
+</section>
+</div>
+{% endblock %}

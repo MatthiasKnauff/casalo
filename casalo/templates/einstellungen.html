@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block titel %}Einstellungen{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div><h1>Einstellungen</h1></div></div>
+<div class="raster">
+<form method="post" class="karte"><input type="hidden" name="bereich" value="verwaltung">
+  <h2>Verwaltung</h2>
+  <label>Name</label><input name="verwaltung_name" value="{{ w.verwaltung_name }}">
+  <label>Anschrift (Fußzeile der PDFs)</label><input name="verwaltung_anschrift" value="{{ w.verwaltung_anschrift }}">
+  <label>FinTS-Produkt-ID</label><input name="fints_produkt_id" value="{{ w.fints_produkt_id }}">
+  <p class="hinweis">Für den Bankabruf per FinTS nötig – kostenlos registrieren bei der Deutschen Kreditwirtschaft (fints.org, „Produktregistrierung“).</p>
+  <p><button>Speichern</button></p>
+</form>
+<form method="post" class="karte"><input type="hidden" name="bereich" value="mail">
+  <h2>E-Mail-Versand</h2>
+  <div class="felder">
+    <div style="grid-column: span 2"><label>SMTP-Server</label><input name="smtp_host" value="{{ w.smtp_host }}" placeholder="smtp.office365.com"></div>
+    <div><label>Port</label><input name="smtp_port" value="{{ w.smtp_port }}"></div>
+    <div><label>Benutzer</label><input name="smtp_user" value="{{ w.smtp_user }}" autocomplete="off"></div>
+    <div><label>Passwort {{ '(gespeichert)' if w.smtp_pass_gesetzt }}</label><input name="smtp_pass" type="password" autocomplete="new-password"></div>
+    <div style="grid-column: span 2"><label>Absender</label><input name="smtp_absender" value="{{ w.smtp_absender }}" placeholder="verwaltung@…"></div>
+  </div>
+  <label>Testnachricht an (optional)</label><input name="test_an" type="email">
+  <p><button>Speichern</button></p>
+</form>
+<section class="karte"><h2>Benutzer</h2>
+  <table>{% for u in benutzerliste %}<tr><td>{{ u.name }}</td><td class="muted">{{ u.email }}</td><td>{{ 'Admin' if u.rolle == 'admin' else 'Mitarbeiter' }}</td>
+    <td>{% if u.id != benutzer.id %}<form method="post" action="/benutzer/{{ u.id }}/loeschen"><button class="klein gefahr" aria-label="Löschen">✕</button></form>{% endif %}</td></tr>{% endfor %}</table>
+  <form method="post"><input type="hidden" name="bereich" value="benutzer">
+    <div class="felder"><div><label>Name</label><input name="name"></div><div><label>E-Mail</label><input name="email" type="email"></div>
+      <div><label>Passwort</label><input name="passwort" type="password" autocomplete="new-password"></div>
+      <div><label>Rolle</label><select name="rolle"><option value="mitarbeiter">Mitarbeiter</option><option value="admin">Admin</option></select></div></div>
+    <p><button class="zweit">Benutzer anlegen</button></p></form>
+</section>
+<form method="post" class="karte"><input type="hidden" name="bereich" value="passwort">
+  <h2>Eigenes Passwort ändern</h2><label>Neues Passwort</label><input name="passwort" type="password" autocomplete="new-password">
+  <p><button class="zweit">Ändern</button></p></form>
+</div>
+{% endblock %}

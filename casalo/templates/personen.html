@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block titel %}Eigentümer{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div><h1>Eigentümer</h1><p class="unter">Neue Eigentümer legen Sie bei der Einheit an.</p></div>
+  <form class="zeile"><input name="q" type="search" value="{{ such }}" placeholder="Name, E-Mail, Telefon" aria-label="Suche" style="width:260px"><button class="zweit">Suchen</button></form></div>
+<section class="karte eng"><div class="scroll"><table>
+  <tr><th>Name</th><th>E-Mail</th><th>Telefon</th><th>Versand</th><th>Hausgeld</th></tr>
+  {% for p in personen %}
+  <tr><td><a href="/person/{{ p.id }}">{{ p.firma or (p.nachname ~ ', ' ~ p.vorname) }}</a></td><td>{{ p.email }}</td><td>{{ p.telefon }}</td>
+      <td>{{ {'email':'E-Mail','post':'Post','portal':'Portal'}[p.versand] }}{% if p.versand != 'post' and not p.email %} <span class="chip warnung">ohne Adresse → Post</span>{% endif %}</td>
+      <td>{{ 'Lastschrift' if p.zahlweise == 'lastschrift' else 'Überweisung' }}</td></tr>
+  {% else %}<tr><td colspan="5" class="leer">Keine Treffer.</td></tr>{% endfor %}
+</table></div></section>
+{% endblock %}

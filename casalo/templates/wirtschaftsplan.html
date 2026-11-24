@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block titel %}Wirtschaftsplan {{ jahr }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}?tab=finanzen">WEG {{ g.name }}</a></p>
+  <h1>Wirtschaftsplan {{ jahr }}</h1>
+  <p class="unter">{% if wp.wp and wp.wp.beschlossen_am %}<span class="chip ok">beschlossen am {{ wp.wp.beschlossen_am|datum }}</span>{% elif wp.wp %}<span class="chip warnung">Entwurf</span>{% else %}noch nicht angelegt{% endif %}</p></div>
+  <div class="zeile">
+    <form method="post" action="/g/{{ g.id }}/wirtschaftsplan/{{ jahr }}/vorjahr"><button class="zweit">Ansätze aus Kosten {{ jahr - 1 }}</button></form>
+    {% if wp.wp %}<a class="knopf" href="/g/{{ g.id }}/wirtschaftsplan/{{ jahr }}.pdf" target="_blank">PDF</a>{% endif %}
+  </div>
+</div>
+{% for h in wp.hinweise %}<div class="meldung warnung">{{ h }}</div>{% endfor %}
+<form method="post">
+<section class="karte eng"><div class="scroll"><table>
+  <tr><th>Kostenart</th><th>Schlüssel</th><th class="zahl">Ist {{ jahr - 1 }}</th><th class="zahl">Ansatz {{ jahr }}</th></tr>
+  {% for ka in kostenarten %}
+  <tr><td>{{ ka.name }}</td><td class="muted">{{ SCHLUESSEL[ka.schluessel] }}</td><td class="zahl muted">{{ vorjahr.get(ka.id)|eur if vorjahr.get(ka.id) else '–' }}</td>
+      <td class="zahl" style="width:160px"><input name="ka_{{ ka.id }}" value="{{ wp.ansaetze.get(ka.id)|betrag }}" style="text-align:right" aria-label="Ansatz {{ ka.name }}"></td></tr>
+  {% endfor %}
+  <tr><td>Zuführung Erhaltungsrücklage</td><td class="muted">MEA</td><td></td>
+      <td class="zahl"><input name="ruecklage" value="{{ (wp.wp.ruecklage_cent if wp.wp else 0)|betrag }}" style="text-align:right" aria-label="Rücklage"></td></tr>
+  <tr class="summe"><td colspan="3">Summe</td><td class="zahl">{{ wp.summe|eur }}</td></tr>
+</table></div></section>
+<section class="karte"><div class="zeile">
+  <div><label for="besch">Beschlossen am</label><input id="besch" type="date" name="beschlossen_am" value="{{ wp.wp.beschlossen_am if wp.wp }}"></div>
+  <div style="align-self:flex-end"><button>Speichern und neu berechnen</button></div>
+</div><p class="hinweis">Das Datum trägt Casalo auch selbst ein, wenn der TOP „Wirtschaftsplan“ in einer Versammlung angenommen wird.</p></section>
+</form>
+{% if wp.wp %}
+<section class="karte eng"><h2>Vorschüsse je Einheit</h2><div class="scroll"><table>
+  <tr><th>Einheit</th><th>Eigentümer</th><th class="zahl">je Jahr</th><th class="zahl">je Monat</th></tr>
+  {% for e in einheiten %}{% set d = wp.einheiten[e.id] %}
+  <tr><td><b>{{ e.nr }}</b></td><td>{{ e.eigentuemer }}</td><td class="zahl">{{ d.jahr|eur }}</td><td class="zahl"><b>{{ d.monat|eur }}</b></td></tr>
+  {% endfor %}
+</table></div></section>
+{% endif %}
+{% endblock %}
