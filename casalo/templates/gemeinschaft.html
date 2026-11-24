@@ -117,11 +117,11 @@
 {% elif tab == 'kostenarten' %}
 <section class="karte eng">
   <div class="scroll"><table class="tab" data-tab="kostenarten">
-    <thead><tr><th class="zahl">#</th><th>Kostenart</th><th>Verteilerschlüssel</th><th>Stichworte für Bankumsätze</th><th data-nosort data-name="Aktionen"></th></tr></thead>
+    <thead><tr><th class="zahl">#</th><th>Kostenart</th><th>Verteilerschlüssel</th><th>Stichworte für Bankumsätze</th><th>§ 35a</th><th class="zahl">Lohnanteil</th><th data-nosort data-name="Aktionen"></th></tr></thead>
     <tbody>
     {% for k in kostenarten %}
     <tr data-karte="/karte/kostenart/{{ k.id }}">
-      {{ zelle('kostenart', k, 'reihenfolge') }}{{ zelle('kostenart', k, 'name') }}{{ zelle('kostenart', k, 'schluessel') }}{{ zelle('kostenart', k, 'stichworte') }}
+      {{ zelle('kostenart', k, 'reihenfolge') }}{{ zelle('kostenart', k, 'name') }}{{ zelle('kostenart', k, 'schluessel') }}{{ zelle('kostenart', k, 'stichworte') }}{{ zelle('kostenart', k, 'steuer35a') }}{{ zelle('kostenart', k, 'lohnanteil') }}
       <td class="zeile">
         {% if k.schluessel == 'verbrauch' %}<a class="klein" href="/g/{{ g.id }}/verbrauch/{{ k.id }}/{{ jahr - 1 }}">Verbrauch {{ jahr - 1 }}</a>{% endif %}
         {% if k.schluessel == 'heizung' %}<a class="klein" href="/g/{{ g.id }}/heizkosten/{{ jahr - 1 }}">Heizkosten {{ jahr - 1 }}</a>{% endif %}

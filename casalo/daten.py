@@ -155,7 +155,9 @@ def vermoegen(gid, jahr, abrechnung=None):
     rueck = 0
     if abrechnung:
         rueck = sum(max(0, d["rueckstand"]) for d in abrechnung.einheiten.values())
-    return {"konten": konten, "summe_konten": sum(k["saldo"] for k in konten), "forderungen": rueck}
+    from . import forderungen
+    umlagen = forderungen.offene_umlagen_summe(gid, stichtag)
+    return {"konten": konten, "summe_konten": sum(k["saldo"] for k in konten), "forderungen": rueck, "umlagen": umlagen}
 
 
 def offene_hausgelder(gid, jahr):

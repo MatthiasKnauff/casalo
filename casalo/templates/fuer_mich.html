@@ -4,11 +4,15 @@
 {% block inhalt %}
 <div class="kopf"><div><h1>Für mich: Darstellung</h1><p class="unter">Gilt nur für Sie, auf jedem Gerät, an dem Sie angemeldet sind.</p></div></div>
 <form method="post" class="karte" id="darst">
-  <h2>Farbe</h2>
+  <h2>Hell oder dunkel</h2>
+  <div class="knopf-wahl" role="radiogroup" aria-label="Schema">
+    {% for k, name in SCHEMATA.items() %}<label class="kw"><input type="radio" name="schema" value="{{ k }}" {{ 'checked' if d.schema == k }}><span>{{ name }}</span></label>{% endfor %}
+  </div>
+  <h2 style="margin-top:20px">Akzentfarbe</h2>
   <div class="knopf-wahl" role="radiogroup" aria-label="Farbe">
-    {% for k, (name, farbe, hell) in FARBEN.items() %}
-    <label class="kw farbe"><input type="radio" name="farbe" value="{{ k }}" {{ 'checked' if d.farbe == k }} data-a="{{ farbe }}" data-b="{{ hell }}">
-      <span><i style="background:{{ farbe }}"></i>{{ name }}</span></label>{% endfor %}
+    {% for k, (name, dunkel, hell) in FARBEN.items() %}
+    <label class="kw farbe"><input type="radio" name="farbe" value="{{ k }}" {{ 'checked' if d.farbe == k }} data-d="{{ dunkel }}" data-h="{{ hell }}">
+      <span><i style="background:linear-gradient(135deg, {{ dunkel }} 50%, {{ hell }} 50%)"></i>{{ name }}</span></label>{% endfor %}
   </div>
   <h2 style="margin-top:20px">Schrift</h2>
   <div class="knopf-wahl" role="radiogroup" aria-label="Schrift">
@@ -30,7 +34,8 @@
 // Vorschau ohne Speichern
 document.getElementById('darst').addEventListener('change', (e) => {
   const r = document.documentElement.style, i = e.target;
-  if (i.name === 'farbe') { r.setProperty('--accent', i.dataset.a); r.setProperty('--accent-bg', i.dataset.b); }
+  if (i.name === 'schema') document.documentElement.dataset.theme = i.value;
+  if (i.name === 'farbe') { r.setProperty('--akz-d', i.dataset.d); r.setProperty('--akz-h', i.dataset.h); }
   if (i.name === 'schrift') r.setProperty('--schrift', i.dataset.css);
   if (i.name === 'groesse') r.setProperty('--gr', i.value + 'px');
   if (i.name === 'dichte') document.documentElement.dataset.dichte = i.value;

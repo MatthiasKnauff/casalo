@@ -12,6 +12,7 @@ STANDARD_KOSTENARTEN = [
     ("Hausmeister", "flaeche", "hausmeister,hauswart"),
     ("Treppenhausreinigung", "flaeche", "reinigung,gebäudereinigung"),
     ("Gartenpflege", "flaeche", "garten,grünpflege"),
+    ("Winterdienst", "flaeche", "winterdienst,schnee,streu"),
     ("Müllabfuhr", "einheiten", "entsorgung,müll,abfall,ebe"),
     ("Wasser / Abwasser", "verbrauch", "wasser,abwasser"),
     ("Heizung und Warmwasser", "heizung", "gas,fernwärme,heizöl,brennstoff,wärme,techem,ista,brunata,minol"),
@@ -30,8 +31,9 @@ def neue_gemeinschaft(nr, name, strasse, plz, ort, assistent=0):
     gid = db.ex("INSERT INTO gemeinschaft (nr, name, strasse, plz, ort, assistent) VALUES (?, ?, ?, ?, ?, ?)",
                 (nr, name, strasse, plz, ort, assistent))
     for n, (kname, sch, w) in enumerate(STANDARD_KOSTENARTEN):
-        db.ex("INSERT INTO kostenart (gemeinschaft_id, name, schluessel, stichworte, reihenfolge) VALUES (?, ?, ?, ?, ?)",
-              (gid, kname, sch, w, n))
+        art35, anteil = next((v for k, v in db.VORBELEGUNG_35A.items() if k in kname.lower()), ("", 100))
+        db.ex("INSERT INTO kostenart (gemeinschaft_id, name, schluessel, stichworte, reihenfolge, steuer35a, lohnanteil) "
+              "VALUES (?, ?, ?, ?, ?, ?, ?)", (gid, kname, sch, w, n, art35, anteil))
     return gid
 
 

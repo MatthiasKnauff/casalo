@@ -1,6 +1,7 @@
 """PDF-Ausgaben (reportlab): Abrechnungen, Wirtschaftsplan, Einladung, Protokoll."""
 import datetime
 import io
+import json
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_RIGHT
@@ -167,6 +168,8 @@ def gesamtabrechnung(g, a, einheiten_namen):
         story.append(_tabelle(zeilen, [136 * mm, 34 * mm], summenzeile=True))
         story.append(Spacer(1, 2 * mm))
         story.append(Paragraph(esc(f"Offene Hausgeldforderungen gegen Eigentümer: {eur(v['forderungen'])}"), S["text"]))
+        if v.get("umlagen"):
+            story.append(Paragraph(esc(f"Offene Sonderumlagen gegen Eigentümer: {eur(v['umlagen'])}"), S["text"]))
     return _bauen(story, f"Gesamtabrechnung {a.jahr}")
 
 
@@ -253,3 +256,141 @@ def protokoll_pdf(g, v, tops, beschluesse):
                           [56 * mm, 56 * mm, 58 * mm], rechts_ab=3))
     story.append(Paragraph("Unterschriften nach § 24 Abs. 6 WEG.", S["klein"]))
     return _bauen(story, "Niederschrift")
+
+
+# ------------------------------------------------------------------ Forderungen
+def _gruss():
+    return [Spacer(1, 8 * mm), Paragraph("Mit freundlichen Grüßen<br/>" + esc(db.setting("verwaltung_name")), S["text"])]
+
+
+def _datum(iso):
+    return datetime.date.fromisoformat(iso).strftime("%d.%m.%Y")
+
+
+def _konto_text(konto):
+    if not konto:
+        return ""
+    from .bank import iban_format
+    return f"{konto['bank'] or 'Konto der Gemeinschaft'} · IBAN {iban_format(konto['iban'])}" + (f" · BIC {konto['bic']}" if konto["bic"] else "")
+
+
+def umlage_anforderung(g, u, einheit, person, anteil, konto, beschluss_text=""):
+    story = _anschrift(person)
+    story += _kopf(g, f"Anforderung Sonderumlage „{u['titel']}“", f"Einheit {einheit['nr']} · {einheit['lage'] or ''}")
+    if beschluss_text:
+        story.append(Paragraph(esc(beschluss_text), S["text"]))
+        story.append(Spacer(1, 3 * mm))
+    schl = {"mea": f"Miteigentumsanteilen ({einheit['mea']:g} MEA)", "flaeche": f"Wohnfläche ({einheit['wohnflaeche']:g} m²)",
+            "einheiten": "Einheiten (je Einheit gleich)"}.get(u["schluessel"], "Miteigentumsanteilen")
+    story.append(_tabelle([["", ""], ["Sonderumlage gesamt", eur(u["betrag_cent"])], [f"Ihr Anteil nach {schl}", eur(anteil)]],
+                          [136 * mm, 34 * mm], summenzeile=True))
+    story.append(Spacer(1, 4 * mm))
+    zweck = f"Sonderumlage {u['titel']} Einheit {einheit['nr']}"
+    if person and person.get("zahlweise") == "lastschrift" and person.get("mandat_ref"):
+        story.append(Paragraph(esc(f"Der Betrag wird zum {_datum(u['faellig'])} von Ihrem Konto per Lastschrift eingezogen "
+                                   f"(Mandat {person['mandat_ref']}). Bitte sorgen Sie für Deckung."), S["text"]))
+    else:
+        story.append(Paragraph(esc(f"Bitte überweisen Sie den Betrag bis zum {_datum(u['faellig'])} auf das Konto der Gemeinschaft:"), S["text"]))
+        story.append(Paragraph(esc(_konto_text(konto)), S["text"]))
+        story.append(Paragraph(esc(f"Verwendungszweck: {zweck}"), S["text"]))
+    if u["zweck"] == "ruecklage":
+        story.append(Spacer(1, 3 * mm))
+        story.append(Paragraph("Die Sonderumlage wird der Erhaltungsrücklage zugeführt.", S["klein"]))
+    return story + _gruss()
+
+
+def umlage_anforderungen(g, u, liste, konto, beschluss_text=""):
+    """liste: [(einheit, person, anteil)]"""
+    story = []
+    for n, (e, p, a) in enumerate(liste):
+        if n:
+            story.append(PageBreak())
+        story += umlage_anforderung(g, u, e, p, a, konto, beschluss_text)
+    return _bauen(story or [Paragraph("Keine Empfänger.", S["text"])], f"Sonderumlage {u['titel']}")
+
+
+def mahnung(g, m, einheit, person, konto):
+    from .forderungen import STUFEN
+    posten = json.loads(m["aufstellung"] or "[]")
+    story = _anschrift(person)
+    story += _kopf(g, STUFEN[m["stufe"]], f"Einheit {einheit['nr']} · Stand {_datum(m['datum'])}")
+    einleitung = {
+        1: "sicher ist es Ihrer Aufmerksamkeit entgangen: Folgende Zahlungen an die Gemeinschaft sind noch offen.",
+        2: "trotz unserer Zahlungserinnerung sind folgende Beträge weiterhin offen.",
+        3: "trotz Erinnerung und Mahnung sind folgende Beträge weiterhin offen. Dies ist unsere letzte Mahnung.",
+    }[m["stufe"]]
+    anrede = "Sehr geehrte Damen und Herren," if not person or person.get("firma") else \
+        f"Guten Tag {' '.join(x for x in (person.get('anrede'), person.get('nachname')) if x)},"
+    story.append(Paragraph(esc(anrede), S["text"]))
+    story.append(Paragraph(esc(einleitung), S["text"]))
+    story.append(Spacer(1, 3 * mm))
+    zeilen = [["Forderung", "fällig seit", "offen"]] + [[esc(p["text"]), _datum(p["faellig"]), eur(p["betrag"])] for p in posten]
+    if m["gebuehr_cent"]:
+        zeilen.append(["Mahngebühr", "", eur(m["gebuehr_cent"])])
+    zeilen.append(["Zu zahlen", "", eur(m["rueckstand_cent"] + m["gebuehr_cent"])])
+    story.append(_tabelle(zeilen, [100 * mm, 36 * mm, 34 * mm], summenzeile=True, rechts_ab=1))
+    story.append(Spacer(1, 4 * mm))
+    story.append(Paragraph(esc(f"Bitte überweisen Sie den Betrag bis zum {_datum(m['frist'])}:"), S["text"]))
+    story.append(Paragraph(esc(_konto_text(konto)), S["text"]))
+    story.append(Paragraph(esc(f"Verwendungszweck: Rückstand Einheit {einheit['nr']}"), S["text"]))
+    story.append(Spacer(1, 3 * mm))
+    if m["stufe"] == 3:
+        story.append(Paragraph("Geht der Betrag nicht fristgerecht ein, wird die Verwaltung die Forderung für die Gemeinschaft "
+                               "gerichtlich geltend machen (§ 27 Abs. 1, § 9b WEG). Dadurch entstehen weitere Kosten, die Sie tragen.",
+                               S["text"]))
+    story.append(Paragraph("Haben Sie inzwischen gezahlt, betrachten Sie dieses Schreiben bitte als gegenstandslos.", S["klein"]))
+    return story + _gruss()
+
+
+def mahnungen(g, liste, konto):
+    """liste: [(mahnung, einheit, person)]"""
+    story = []
+    for n, (m, e, p) in enumerate(liste):
+        if n:
+            story.append(PageBreak())
+        story += mahnung(g, m, e, p, konto)
+    return _bauen(story or [Paragraph("Keine Mahnungen.", S["text"])], "Mahnungen")
+
+
+def bescheinigung_35a(g, jahr, einheit, person, d):
+    from .forderungen import KAT_35A
+    story = _anschrift(person)
+    story += _kopf(g, f"Bescheinigung über Aufwendungen nach § 35a EStG – {jahr}",
+                   f"Einheit {einheit['nr']} · {einheit['lage'] or ''} · {g['strasse']}, {g['plz']} {g['ort']}")
+    story.append(Paragraph(esc(f"Für das Kalenderjahr {jahr} sind für das Gemeinschaftseigentum folgende Arbeitskosten "
+                               "(einschließlich Umsatzsteuer, ohne Material) unbar bezahlt worden. Der auf Ihre Einheit entfallende "
+                               "Anteil ist nach dem Verteilerschlüssel der Jahresabrechnung ermittelt."), S["text"]))
+    for kat, (titel, norm, _, _) in KAT_35A.items():
+        pos = [p for p in d["posten"] if p["kategorie"] == kat and p["anteil"]]
+        if not pos:
+            continue
+        story.append(Paragraph(esc(f"{titel} ({norm})"), S["h2"]))
+        zeilen = [["Leistung", "Arbeitskosten gesamt", "Ihr Anteil"]] + \
+                 [[Paragraph(esc(p["kostenart"]), S["text"]), eur(p["gesamt"]), eur(p["anteil"])] for p in pos]
+        zeilen.append(["Summe", "", eur(d["summen"][kat])])
+        story.append(_tabelle(zeilen, [100 * mm, 36 * mm, 34 * mm], summenzeile=True))
+    if not any(d["summen"].values()):
+        story.append(Spacer(1, 3 * mm))
+        story.append(Paragraph("Im Kalenderjahr sind keine begünstigten Aufwendungen angefallen.", S["text"]))
+    story.append(Spacer(1, 5 * mm))
+    story.append(Paragraph(
+        "Die Steuerermäßigung beträgt 20 % der Aufwendungen, höchstens 510 € (geringfügige Beschäftigung), 4.000 € "
+        "(haushaltsnahe Dienstleistungen) bzw. 1.200 € (Handwerkerleistungen) im Jahr. Begünstigt sind nur Arbeits-, "
+        "Fahrt- und Maschinenkosten, nicht Material; Voraussetzung ist eine Rechnung und Zahlung auf ein Konto des "
+        "Leistenden (§ 35a Abs. 5 EStG). Bei vermieteten Einheiten gehören die Kosten zu den Werbungskosten; "
+        "eine Weitergabe an Mieter ist über deren Nebenkostenabrechnung möglich. Diese Bescheinigung ersetzt keine Steuerberatung.",
+        S["klein"]))
+    return story + _gruss()
+
+
+def bescheinigung_35a_pdf(g, jahr, einheit, person, d):
+    return _bauen(bescheinigung_35a(g, jahr, einheit, person, d), f"Bescheinigung 35a {jahr}")
+
+
+def bescheinigungen_35a_pdf(g, jahr, liste):
+    story = []
+    for n, (e, p, d) in enumerate(liste):
+        if n:
+            story.append(PageBreak())
+        story += bescheinigung_35a(g, jahr, e, p, d)
+    return _bauen(story or [Paragraph("Keine Empfänger.", S["text"])], f"Bescheinigungen 35a {jahr}")

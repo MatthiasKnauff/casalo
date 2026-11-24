@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block titel %}Sonderumlagen{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}">WEG {{ g.name }}</a></p>
+  <h1>Sonderumlagen</h1><p class="unter">beschließen, auf die Einheiten verteilen, anfordern, Zahlungen verfolgen</p></div></div>
+<section class="karte eng"><div class="scroll"><table class="tab" data-tab="sonderumlagen">
+  <thead><tr><th>Fällig</th><th>Sonderumlage</th><th>Schlüssel</th><th>für</th><th class="zahl">Betrag</th><th class="zahl">gezahlt</th><th class="zahl">offen</th><th>angefordert</th></tr></thead><tbody>
+  {% for u in umlagen %}
+  <tr onclick="location.href='/sonderumlage/{{ u.id }}'" style="cursor:pointer">
+    <td data-sort="{{ u.faellig }}">{{ u.faellig|datum }}</td><td><a href="/sonderumlage/{{ u.id }}"><b>{{ u.titel }}</b></a></td>
+    <td>{{ dict(schluessel)[u.schluessel] }}</td><td>{{ 'Rücklage' if u.zweck == 'ruecklage' else 'Hausgeld' }}</td>
+    <td class="zahl" data-sort="{{ u.betrag_cent }}">{{ u.betrag_cent|eur }}</td><td class="zahl" data-sort="{{ u.ist }}">{{ u.ist|eur }}</td>
+    <td class="zahl {{ 'rot' if u.offen > 0 }}" data-sort="{{ u.offen }}">{{ u.offen|eur }}</td>
+    <td>{% if u.angefordert %}{{ u.angefordert|datum }}{% else %}<span class="chip warnung">noch nicht</span>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="8" class="leer">Noch keine Sonderumlage.</td></tr>{% endfor %}
+</tbody></table></div></section>
+<section class="karte"><h2>Neue Sonderumlage</h2>
+  <form method="post"><div class="felder">
+    <div style="grid-column: span 2"><label>Titel</label><input name="titel" required placeholder="z. B. Dachsanierung"></div>
+    <div><label>Gesamtbetrag</label><input name="betrag" required placeholder="0,00" inputmode="decimal"></div>
+    <div><label>Verteilung nach</label><select name="schluessel">{% for k, t in schluessel %}<option value="{{ k }}">{{ t }}</option>{% endfor %}</select></div>
+    <div><label>Fällig am</label><input type="date" name="faellig" required></div>
+    <div><label>Fließt in</label><select name="zweck"><option value="ruecklage">Erhaltungsrücklage</option><option value="hausgeld">Hausgeldkonto</option></select></div>
+    <div><label>Beschluss</label><select name="beschluss_id"><option value="">– aus der Beschluss-Sammlung –</option>{% for b in beschluesse %}<option value="{{ b.id }}">Nr. {{ b.lfd }} vom {{ b.datum|datum }}: {{ b.text[:60] }}</option>{% endfor %}</select></div>
+    <div><label>oder beschlossen am</label><input type="date" name="beschlossen_am"></div>
+  </div>
+  <p class="hinweis">Sonderumlagen brauchen einen Beschluss der Eigentümer (§ 28 Abs. 1 WEG). Die Anteile werden auf den Cent genau verteilt – die Summe stimmt immer.</p>
+  <p><button>Anlegen</button></p></form></section>
+{% endblock %}

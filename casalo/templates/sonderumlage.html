@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block titel %}{{ u.titel }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}/sonderumlagen">WEG {{ g.name }} · Sonderumlagen</a></p>
+  <h1>{{ u.titel }}</h1>
+  <p class="unter">{{ u.betrag_cent|eur }} nach {{ schluessel[u.schluessel] }} · fällig {{ u.faellig|datum }} · fließt in {{ 'die Erhaltungsrücklage' if u.zweck == 'ruecklage' else 'das Hausgeldkonto' }}</p></div>
+  <div class="zeile">
+    <a class="knopf zweit" href="/sonderumlage/{{ u.id }}/anforderung.pdf" target="_blank">Alle Anforderungen (PDF)</a>
+    <a class="knopf zweit" href="/sonderumlage/{{ u.id }}/anforderung.pdf?post=1" target="_blank">Für den Postversand</a>
+    <form method="post" action="/sonderumlage/{{ u.id }}/lastschrift"><button class="zweit" title="SEPA-Datei für Eigentümer mit Lastschrift-Mandat">Lastschrift-Datei</button></form>
+    <form method="post" action="/sonderumlage/{{ u.id }}/versand" data-frage="Anforderung an alle Eigentümer mit E-Mail versenden?" data-ok="Versenden"><button>Anfordern</button></form>
+  </div>
+</div>
+{% if beschluss %}<p class="hinweis">{{ beschluss }}</p>{% else %}<p class="hinweis warnung">Kein Beschluss hinterlegt – ohne Beschluss ist die Sonderumlage nicht durchsetzbar.</p>{% endif %}
+<div class="raster">
+  <div class="kachel"><span class="klein muted">Soll</span><b>{{ stand.soll|eur }}</b></div>
+  <div class="kachel"><span class="klein muted">gezahlt</span><b class="gruen">{{ stand.ist|eur }}</b></div>
+  <div class="kachel"><span class="klein muted">offen</span><b class="{{ 'rot' if stand.offen }}">{{ stand.offen|eur }}</b></div>
+  <div class="kachel"><span class="klein muted">angefordert</span><b>{{ u.angefordert|datum if u.angefordert else 'noch nicht' }}</b></div>
+</div>
+<section class="karte eng"><div class="scroll"><table class="tab" data-tab="umlage-einheiten">
+  <thead><tr><th>Einheit</th><th>Eigentümer</th><th>Zahlweise</th><th class="zahl">Anteil</th><th class="zahl">gezahlt</th><th class="zahl">offen</th></tr></thead><tbody>
+  {% for z in stand.zeilen %}
+  <tr data-karte="/karte/einheit/{{ z.einheit.id }}"><td><b>{{ z.einheit.nr }}</b> <span class="muted klein">{{ z.einheit.lage }}</span></td><td>{{ z.eigentuemer }}</td>
+    <td>{{ 'Lastschrift' if z.lastschrift else 'Überweisung' }}</td>
+    <td class="zahl" data-sort="{{ z.soll }}">{{ z.soll|eur }}</td><td class="zahl" data-sort="{{ z.ist }}">{{ z.ist|eur }}</td>
+    <td class="zahl {{ 'rot' if z.offen > 0 and u.faellig <= heute }}" data-sort="{{ z.offen }}">{{ z.offen|eur }}</td></tr>
+  {% endfor %}
+</tbody></table></div></section>
+<p class="hinweis">Zahlungen kommen über „Bank &amp; Hausgeld“ (Verwendungszweck mit „Sonderumlage“ oder genau der Anteil wird erkannt) oder unter Buchungen als „Sonderumlage-Eingang“.
+Offene Anteile erscheinen nach Fälligkeit im Mahnwesen und im Vermögensbericht.</p>
+<form method="post" action="/sonderumlage/{{ u.id }}/loeschen" data-frage="Sonderumlage „{{ u.titel }}“ löschen?" data-ok="Löschen"><button class="klein gefahr">Sonderumlage löschen</button></form>
+{% endblock %}

@@ -8,7 +8,8 @@
   <div class="zeile">
     <a class="knopf zweit" href="/g/{{ g.id }}/abrechnung/{{ jahr - 1 }}">← {{ jahr - 1 }}</a>
     <a class="knopf zweit" href="/g/{{ g.id }}/abrechnung/{{ jahr }}/gesamt.pdf" target="_blank">Gesamtabrechnung (PDF)</a>
-    <form method="post" action="/g/{{ g.id }}/abrechnung/{{ jahr }}/versand"><button>An Eigentümer versenden</button></form>
+    <a class="knopf zweit" href="/g/{{ g.id }}/steuer35a/{{ jahr }}">§ 35a-Bescheinigungen</a>
+    <form method="post" action="/g/{{ g.id }}/abrechnung/{{ jahr }}/versand"><button title="mit § 35a-Bescheinigung im Anhang, wenn begünstigte Kosten angefallen sind">An Eigentümer versenden</button></form>
   </div>
 </div>
 
@@ -35,6 +36,7 @@
   {% for k in a.vermoegen.konten %}<tr><td>{{ 'Rücklage' if k.art == 'ruecklage' else 'Hausgeld' }} · {{ k.bank }}</td><td class="zahl">{{ k.saldo|eur }}</td></tr>{% endfor %}
   <tr class="summe"><td>Bankguthaben</td><td class="zahl">{{ a.vermoegen.summe_konten|eur }}</td></tr>
   <tr><td>offene Hausgeldforderungen</td><td class="zahl">{{ a.vermoegen.forderungen|eur }}</td></tr>
+  {% if a.vermoegen.umlagen %}<tr><td>offene Sonderumlagen</td><td class="zahl">{{ a.vermoegen.umlagen|eur }}</td></tr>{% endif %}
 </table></section>
 </div>
 

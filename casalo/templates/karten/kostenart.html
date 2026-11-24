@@ -3,7 +3,10 @@
   <tr><th>Name</th>{{ zelle('kostenart', k, 'name') }}</tr>
   <tr><th>Schlüssel</th>{{ zelle('kostenart', k, 'schluessel') }}</tr>
   <tr><th>Stichworte</th>{{ zelle('kostenart', k, 'stichworte') }}</tr>
+  <tr><th>§ 35a EStG</th>{{ zelle('kostenart', k, 'steuer35a') }}</tr>
+  <tr><th>Lohnanteil</th>{{ zelle('kostenart', k, 'lohnanteil') }}</tr>
   <tr><th>Kosten bisher</th><td class="zahl">{{ ist|eur }}</td></tr>
   <tr><th>Kosten Vorjahr</th><td class="zahl">{{ vorjahr|eur }}</td></tr>
 </table>
-<p class="hinweis">Die Stichworte helfen, Bankumsätze dieser Kostenart zuzuordnen.</p>
+<p class="hinweis">Die Stichworte helfen, Bankumsätze dieser Kostenart zuzuordnen. § 35a: Arbeitskosten dieser Kostenart erscheinen
+in der Steuerbescheinigung – mit dem Lohnanteil, solange bei der Buchung keine Arbeitskosten laut Rechnung stehen.</p>

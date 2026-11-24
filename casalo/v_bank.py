@@ -4,7 +4,7 @@ import json
 
 from flask import Response, abort, flash, redirect, render_template, request
 
-from . import bank, daten, db, rechnen
+from . import bank, daten, db, forderungen, rechnen
 from .web import bp, f, f_int, gemeinschaft_oder_404
 
 
@@ -27,20 +27,41 @@ def fruehere_zuordnungen(gid):
 def vorschlag(u, konto):
     gid = konto["gemeinschaft_id"]
     if u["betrag_cent"] > 0:
-        return bank.vorschlag_eingang(u, kandidaten(gid, int(u["datum"][:4])))
+        v = bank.vorschlag_eingang(u, kandidaten(gid, int(u["datum"][:4])))
+        return sonderumlage_erkennen(u, v)
     kas = [dict(k) for k in db.q("SELECT * FROM kostenart WHERE gemeinschaft_id = ?", (gid,))]
     return bank.vorschlag_ausgang(u, kas, fruehere_zuordnungen(gid))
 
 
-def buchen(umsatz_id, art, kostenart_id=None, einheit_id=None, text=""):
+def sonderumlage_erkennen(u, v):
+    """Eingang einer Einheit: Stichwort „Sonderumlage“ oder genau ein offener Umlage-Anteil → Sonderumlage statt Hausgeld."""
+    if not v or not v.get("einheit_id"):
+        return v
+    offen = forderungen.offene_umlagen(v["einheit_id"])
+    if not offen:
+        return v
+    zweck = (u.get("zweck") or "").lower()
+    passend = [o for o in offen if o["offen"] == u["betrag_cent"] or o["soll"] == u["betrag_cent"]]
+    if "sonderumlage" in zweck:
+        treffer = (passend or offen)[0]
+    elif len(passend) == 1:
+        treffer = passend[0]
+    else:
+        return v
+    nr = v["text"].replace("Hausgeld ", "")
+    return v | {"art": "sonderumlage", "sonderumlage_id": treffer["id"], "text": f"Sonderumlage {treffer['titel']} {nr}",
+                "gruende": v["gruende"] + ["offene Sonderumlage"]}
+
+
+def buchen(umsatz_id, art, kostenart_id=None, einheit_id=None, text="", sonderumlage_id=None):
     u = db.q("SELECT u.*, k.gemeinschaft_id FROM umsatz u JOIN konto k ON k.id = u.konto_id WHERE u.id = ?",
              (umsatz_id,), one=True)
     if not u or u["status"] != "neu":
         return None
-    bid = db.ex("INSERT INTO buchung (gemeinschaft_id, konto_id, datum, betrag_cent, art, kostenart_id, einheit_id, text, umsatz_id) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    bid = db.ex("INSERT INTO buchung (gemeinschaft_id, konto_id, datum, betrag_cent, art, kostenart_id, einheit_id, text, umsatz_id, "
+                "sonderumlage_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (u["gemeinschaft_id"], u["konto_id"], u["datum"], u["betrag_cent"], art, kostenart_id, einheit_id,
-                 text or f"{u['name']} {u['zweck']}"[:200], umsatz_id))
+                 text or f"{u['name']} {u['zweck']}"[:200], umsatz_id, sonderumlage_id))
     db.ex("UPDATE umsatz SET status = 'gebucht' WHERE id = ?", (umsatz_id,))
     return bid
 
@@ -62,7 +83,7 @@ def speichern(konto, liste, automatisch=True):
                      json.dumps(v, ensure_ascii=False) if v else ""))
         neu += 1
         if automatisch and v and v["sicherheit"] == "sicher":
-            buchen(uid, v["art"], v.get("kostenart_id"), v.get("einheit_id"), v["text"])
+            buchen(uid, v["art"], v.get("kostenart_id"), v.get("einheit_id"), v["text"], v.get("sonderumlage_id"))
             gebucht += 1
     db.ex("UPDATE konto SET letzter_abruf = ? WHERE id = ?", (datetime.datetime.now().isoformat(timespec="minutes"), konto["id"]))
     return neu, gebucht
@@ -103,7 +124,10 @@ def bank_seite():
     for u in offen:
         gid = u["gemeinschaft_id"]
         if gid not in auswahl:
-            auswahl[gid] = {"einheiten": daten.einheiten(gid),
+            ein = daten.einheiten(gid)
+            umlagen = [{"wert": f"u:{x['id']}:{e['id']}", "text": f"{x['titel']} – {e['nr']} ({rechnen.fmt(x['offen'])} €)"}
+                       for e in ein for x in forderungen.offene_umlagen(e["id"])]
+            auswahl[gid] = {"einheiten": ein, "umlagen": umlagen,
                             "kostenarten": db.q("SELECT * FROM kostenart WHERE gemeinschaft_id = ? ORDER BY reihenfolge", (gid,))}
         liste.append(dict(u) | {"v": json.loads(u["vorschlag"]) if u["vorschlag"] else None})
     gebucht = db.q("SELECT COUNT(*) AS n FROM umsatz WHERE status = 'gebucht'", one=True)["n"]
@@ -175,9 +199,14 @@ def umsatz_buchen(uid):
         db.ex("UPDATE umsatz SET status = 'ignoriert' WHERE id = ?", (uid,))
         flash("Umsatz ausgeblendet.", "ok")
         return redirect("/bank")
-    ziel = f("ziel")                    # "e:<einheit_id>" | "k:<kostenart_id>" | "s"
+    ziel = f("ziel")                    # "e:<einheit_id>" | "u:<umlage>:<einheit>" | "k:<kostenart_id>" | "s"
     if ziel.startswith("e:"):
         buchen(uid, "hausgeld", einheit_id=int(ziel[2:]))
+    elif ziel.startswith("u:"):
+        _, sid, eid = ziel.split(":")
+        su = db.q("SELECT * FROM sonderumlage WHERE id = ?", (int(sid),), one=True)
+        buchen(uid, "sonderumlage", einheit_id=int(eid), sonderumlage_id=int(sid),
+               text=f"Sonderumlage {su['titel'] if su else ''}")
     elif ziel.startswith("k:"):
         buchen(uid, "kosten", kostenart_id=int(ziel[2:]))
     elif ziel == "s":

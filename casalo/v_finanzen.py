@@ -6,7 +6,7 @@ import re
 
 from flask import Response, abort, flash, redirect, render_template, request
 
-from . import daten, db, mail, pdf, rechnen
+from . import daten, db, forderungen, mail, pdf, rechnen
 from .web import bp, f, f_betrag, f_int, gemeinschaft_oder_404
 
 
@@ -32,33 +32,38 @@ def buchungen(gid):
             betrag = f_betrag("betrag")
         except ValueError:
             return redirect(request.url)
-        art = f("art") if f("art") in ("kosten", "hausgeld", "sonstig") else "sonstig"
+        art = f("art") if f("art") in ("kosten", "hausgeld", "sonderumlage", "sonstig") else "sonstig"
         if art == "kosten":
             betrag = -abs(betrag) if f("richtung") != "ein" else abs(betrag)
-        elif art == "hausgeld":
+        elif art in ("hausgeld", "sonderumlage"):
             betrag = abs(betrag)
         elif f("richtung") == "aus":
             betrag = -abs(betrag)
         if art == "kosten" and not f_int("kostenart_id"):
             flash("Kosten brauchen eine Kostenart.", "fehler")
             return redirect(request.url)
-        if art == "hausgeld" and not f_int("einheit_id"):
-            flash("Hausgeld braucht eine Einheit.", "fehler")
+        if art in ("hausgeld", "sonderumlage") and not f_int("einheit_id"):
+            flash("Zahlungen von Eigentümern brauchen eine Einheit.", "fehler")
             return redirect(request.url)
-        db.ex("INSERT INTO buchung (gemeinschaft_id, konto_id, datum, betrag_cent, art, kostenart_id, einheit_id, text) "
-              "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        if art == "sonderumlage" and not f_int("sonderumlage_id"):
+            flash("Bitte die Sonderumlage wählen.", "fehler")
+            return redirect(request.url)
+        db.ex("INSERT INTO buchung (gemeinschaft_id, konto_id, datum, betrag_cent, art, kostenart_id, einheit_id, text, sonderumlage_id) "
+              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
               (gid, f_int("konto_id") or None, f("datum") or datetime.date.today().isoformat(), betrag, art,
-               f_int("kostenart_id") or None, f_int("einheit_id") or None, f("text")))
+               f_int("kostenart_id") or None, f_int("einheit_id") or None, f("text"),
+               (f_int("sonderumlage_id") or None) if art == "sonderumlage" else None))
         flash("Gebucht.", "ok")
         return redirect(f"/g/{gid}/buchungen?jahr={jahr}")
-    rows = db.q("SELECT b.*, k.name AS ka_name, e.nr AS e_nr, ko.art AS konto_art, ko.bank AS konto_bank "
+    rows = db.q("SELECT b.*, k.name AS ka_name, k.steuer35a AS ka_35a, e.nr AS e_nr, ko.art AS konto_art, ko.bank AS konto_bank "
                 "FROM buchung b LEFT JOIN kostenart k ON k.id = b.kostenart_id LEFT JOIN einheit e ON e.id = b.einheit_id "
                 "LEFT JOIN konto ko ON ko.id = b.konto_id WHERE b.gemeinschaft_id = ? AND b.datum BETWEEN ? AND ? "
                 "ORDER BY b.datum DESC, b.id DESC", (gid, f"{jahr}-01-01", f"{jahr}-12-31"))
     return render_template("buchungen.html", g=g, jahr=jahr, buchungen=rows,
                            konten=db.q("SELECT * FROM konto WHERE gemeinschaft_id = ? ORDER BY art", (gid,)),
                            kostenarten=db.q("SELECT * FROM kostenart WHERE gemeinschaft_id = ? ORDER BY reihenfolge", (gid,)),
-                           einheiten=daten.einheiten(gid))
+                           einheiten=daten.einheiten(gid),
+                           umlagen=db.q("SELECT * FROM sonderumlage WHERE gemeinschaft_id = ? ORDER BY faellig DESC", (gid,)))
 
 
 @bp.post("/buchung/<int:bid>/loeschen")
@@ -193,16 +198,21 @@ def abrechnung_versand(gid, jahr):
         flash("Die Prüfungen sind nicht alle grün – Versand abgebrochen.", "fehler")
         return redirect(f"/g/{gid}/abrechnung/{jahr}")
     kas = daten.kostenarten(gid)
+    b35 = forderungen.bescheinigung_35a(gid, jahr)
     mails, post, fehler = 0, 0, []
     for e, p in _empfaenger_liste(gid):
         if empfaenger_weg(p) == "post":
             post += 1
             continue
+        anhaenge = [(f"Einzelabrechnung-{jahr}-{e['nr']}.pdf", pdf.einzelabrechnung(g, e, p, a, kas), "application/pdf")]
+        d35 = b35["einheiten"].get(e["id"])
+        if d35 and any(d35["summen"].values()):
+            anhaenge.append((f"Bescheinigung-35a-{jahr}-{e['nr']}.pdf", pdf.bescheinigung_35a_pdf(g, jahr, e, p, d35), "application/pdf"))
         try:
             mail.senden(p["email"], f"Jahresabrechnung {jahr} – {g['name']}, Einheit {e['nr']}",
-                        f"Guten Tag,\n\nanbei erhalten Sie die Einzelabrechnung {jahr} für Ihre Einheit {e['nr']}.\n\n"
-                        f"Mit freundlichen Grüßen\n{db.setting('verwaltung_name')}",
-                        [(f"Einzelabrechnung-{jahr}-{e['nr']}.pdf", pdf.einzelabrechnung(g, e, p, a, kas), "application/pdf")])
+                        f"Guten Tag,\n\nanbei erhalten Sie die Einzelabrechnung {jahr} für Ihre Einheit {e['nr']}"
+                        + (" und die Bescheinigung nach § 35a EStG für Ihre Steuererklärung" if len(anhaenge) > 1 else "") + ".\n\n"
+                        f"Mit freundlichen Grüßen\n{db.setting('verwaltung_name')}", anhaenge)
             mails += 1
         except mail.MailFehler as ex:
             fehler.append(str(ex))

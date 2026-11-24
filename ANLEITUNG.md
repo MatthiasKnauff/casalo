@@ -53,11 +53,27 @@ Erster Aufruf: Sie legen sich als Administrator an (Name, E-Mail, Passwort).
   rechte Maustaste auf eine Zeile öffnet das Kontextmenü. Ab acht Zeilen gibt es ein Suchfeld.
 - **Assistent:** Gemeinschaften → „Mit dem Assistenten einrichten“: Gemeinschaft, Einheiten (auch als Serie, MEA aus der
   Wohnfläche), Eigentümer, Konten, Wirtschaftsplan. Jeder Schritt speichert sofort; „Einrichtung fortsetzen“ führt zurück.
-- **Für mich (⚙):** Farbe, Schrift, Schriftgröße und Abstände – gilt nur für den eigenen Benutzer.
+- **Für mich (⚙):** dunkel (Standard, wie die Bauplattform), hell oder wie das Gerät; Akzentfarbe, Schrift, Schriftgröße
+  und Abstände – gilt nur für den eigenen Benutzer.
 
 Technik: Die Logik liegt vollständig auf dem Server (Python). Die Oberfläche ist HTML vom Server, nachgeladen mit
 htmx 2.0.4 (eine Datei, fest im Repo unter `casalo/static/vendor/`, keine Build-Kette) und kleinen eigenen Modulen
 in `casalo/static/js/` (Kern, Rückgängig, Tabellen, Bereich rechts).
+
+## Sonderumlagen, Mahnwesen, § 35a
+
+- **Sonderumlagen** (Gemeinschaft → Sonderumlagen): Titel, Betrag, Schlüssel (MEA, Fläche, je Einheit), Fälligkeit, Beschluss
+  aus der Beschluss-Sammlung. Die Anteile werden centgenau verteilt. „Anfordern“ schickt die Schreiben per E-Mail, der Rest
+  kommt als Druckdatei; für Lastschrift-Eigentümer gibt es eine SEPA-Datei. Zahlungen erkennt der Bankabgleich am Wort
+  „Sonderumlage“ im Verwendungszweck oder am genauen Anteil. Offene Anteile stehen im Vermögensbericht.
+- **Mahnwesen** (Gemeinschaft → Mahnwesen): Rückstände aus Hausgeld (Vorschüsse je Monat laut Wirtschaftsplan, Vorjahr und
+  laufendes Jahr) und fälligen Sonderumlagen; Zahlungen tilgen die älteste Forderung. Stufen Zahlungserinnerung → Mahnung →
+  letzte Mahnung, jeweils nach Ablauf der Frist. Frist, Mindestbetrag und Gebühren einstellbar. Ist alles bezahlt, wird die
+  laufende Mahnung von selbst erledigt.
+- **§ 35a EStG** (Abrechnung → § 35a-Bescheinigungen): Kostenarten als haushaltsnahe Dienstleistung, Handwerkerleistung oder
+  Minijob kennzeichnen, mit Lohnanteil (übliche Kostenarten sind vorbelegt). Steht bei einer Buchung der Lohnanteil laut
+  Rechnung („davon Lohn“), gilt dieser. Verteilt wird wie in der Abrechnung; Maßnahmen aus der Rücklage nach MEA. Die
+  Bescheinigung geht beim Versand der Jahresabrechnung mit, wenn begünstigte Kosten angefallen sind.
 
 ## 3. Bank
 

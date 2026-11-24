@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block titel %}§ 35a {{ jahr }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}/abrechnung/{{ jahr }}">WEG {{ g.name }} · Abrechnung {{ jahr }}</a></p>
+  <h1>Bescheinigungen § 35a EStG – {{ jahr }}</h1>
+  <p class="unter">haushaltsnahe Dienstleistungen und Handwerkerleistungen je Eigentümer</p></div>
+  <div class="zeile">
+    <a class="knopf zweit" href="/g/{{ g.id }}/steuer35a/{{ jahr - 1 }}">← {{ jahr - 1 }}</a>
+    <a class="knopf zweit" href="/g/{{ g.id }}/steuer35a/{{ jahr }}/alle.pdf?post=1" target="_blank">Für den Postversand</a>
+    <a class="knopf" href="/g/{{ g.id }}/steuer35a/{{ jahr }}/alle.pdf" target="_blank">Alle (PDF)</a>
+  </div>
+</div>
+{% if not b.kostenarten %}
+<p class="hinweis warnung">Noch keine Kostenart ist § 35a zugeordnet. Unter <a href="/g/{{ g.id }}?tab=kostenarten">Kostenarten</a> „§ 35a“ und den Lohnanteil eintragen.</p>
+{% else %}
+<section class="karte eng"><h2 style="padding:14px 14px 0">Arbeitskosten der Gemeinschaft {{ jahr }}</h2><div class="scroll"><table class="tab" data-tab="35a-gesamt">
+  <thead><tr><th>Kostenart</th><th>Art</th><th class="zahl">Arbeitskosten</th></tr></thead><tbody>
+  {% for z in b.zeilen %}<tr><td>{{ z.kostenart }}</td><td>{{ kat[z.kategorie][0] }}</td><td class="zahl">{{ z.gesamt|eur }}</td></tr>
+  {% else %}<tr><td colspan="3" class="leer">In {{ jahr }} keine begünstigten Zahlungen gebucht.</td></tr>{% endfor %}
+</tbody></table></div></section>
+<section class="karte eng"><div class="scroll"><table class="tab" data-tab="35a-einheiten">
+  <thead><tr><th>Einheit</th><th>Eigentümer</th>{% for k, v in kat.items() %}<th class="zahl">{{ v[0].split(' (')[0] }}</th>{% endfor %}<th data-nosort data-name="PDF"></th></tr></thead><tbody>
+  {% for z in zeilen %}
+  <tr data-karte="/karte/einheit/{{ z.einheit.id }}"><td><b>{{ z.einheit.nr }}</b></td><td>{{ z.eigentuemer }}</td>
+    {% for k in kat %}<td class="zahl">{{ (z.summen.get(k) or 0)|eur }}</td>{% endfor %}
+    <td><a class="klein" href="/g/{{ g.id }}/steuer35a/{{ jahr }}/{{ z.einheit.id }}.pdf" target="_blank">PDF</a></td></tr>
+  {% endfor %}
+</tbody></table></div></section>
+{% endif %}
+<section class="karte eng"><h2 style="padding:14px 14px 0">Zuordnung der Kostenarten</h2><div class="scroll"><table class="tab" data-tab="35a-kostenarten">
+  <thead><tr><th>Kostenart</th><th>§ 35a</th><th class="zahl">Lohnanteil</th></tr></thead><tbody>
+  {% for k in kostenarten %}<tr>{{ zelle('kostenart', k, 'name') }}{{ zelle('kostenart', k, 'steuer35a') }}{{ zelle('kostenart', k, 'lohnanteil') }}</tr>{% endfor %}
+</tbody></table></div></section>
+<p class="hinweis">Maßgeblich ist das Jahr der Zahlung. Der Lohnanteil gilt, solange bei einer Buchung keine Arbeitskosten laut Rechnung eingetragen sind
+(Buchungen → Spalte „davon Lohn“). Aus der Rücklage bezahlte Maßnahmen werden nach MEA verteilt. Mit dem Versand der Jahresabrechnung geht die Bescheinigung automatisch mit.</p>
+{% endblock %}

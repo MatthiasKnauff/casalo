@@ -69,12 +69,15 @@ def test_gemeinschaft_oben_gemerkt(client, weg):
 
 
 def test_darstellung_je_benutzer(client):
-    client.post("/fuer-mich", data={"farbe": "bordeaux", "schrift": "serifen", "groesse": "17", "dichte": "kompakt"})
     seite = client.get("/").get_data(as_text=True)
-    assert "--accent:#8a2a3b" in seite and "--gr:17px" in seite and 'data-dichte="kompakt"' in seite and "Georgia" in seite
-    client.post("/fuer-mich", data={"farbe": "rosa", "groesse": "99"})        # Unsinn → Standard
+    assert 'data-theme="dunkel"' in seite and "--akz-d:#ff5fb3" in seite                 # Standard wie die Bauplattform
+    client.post("/fuer-mich", data={"schema": "hell", "farbe": "blau", "schrift": "serifen", "groesse": "17", "dichte": "kompakt"})
     seite = client.get("/").get_data(as_text=True)
-    assert "--accent:#1f5fa8" in seite and "--gr:15px" in seite
+    assert 'data-theme="hell"' in seite and "--akz-h:#2f6fd6" in seite and "--gr:17px" in seite
+    assert 'data-dichte="kompakt"' in seite and "Georgia" in seite
+    client.post("/fuer-mich", data={"schema": "lila", "farbe": "rosa", "groesse": "99"})        # Unsinn → Standard
+    seite = client.get("/").get_data(as_text=True)
+    assert 'data-theme="dunkel"' in seite and "--akz-d:#ff5fb3" in seite and "--gr:15px" in seite
 
 
 def test_assistent_ganzer_ablauf(client, app):

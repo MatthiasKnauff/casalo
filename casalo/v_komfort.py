@@ -19,6 +19,8 @@ ZAHLWEISE = [("ueberweisung", "Überweisung"), ("lastschrift", "Lastschrift")]
 STATUS = [("offen", "offen"), ("erledigt", "erledigt")]
 KONTOART = [("hausgeld", "Hausgeld"), ("ruecklage", "Rücklage")]
 ZUGANG = [("fints", "FinTS"), ("finapi", "finAPI"), ("datei", "Datei-Import")]
+STEUER35A = [("", "–"), ("dienstleistung", "Haushaltsnahe Dienstleistung"), ("handwerker", "Handwerkerleistung"),
+             ("minijob", "Minijob (geringfügig)")]
 
 
 def F(name, typ="text", pflicht=False, optionen=None, einheit=""):
@@ -37,7 +39,8 @@ FELDER = {
                "mandat_ref": F("Mandatsreferenz"), "mandat_datum": F("Mandat vom", "datum"), "notiz": F("Notiz", "lang")},
     "kostenart": {"_tabelle": "kostenart", "_titel": lambda r: r["name"],
                   "name": F("Kostenart", pflicht=True), "schluessel": F("Schlüssel", "wahl", optionen=list(rechnen.SCHLUESSEL.items())),
-                  "stichworte": F("Stichworte"), "reihenfolge": F("#", "ganz")},
+                  "stichworte": F("Stichworte"), "reihenfolge": F("#", "ganz"),
+                  "steuer35a": F("§ 35a", "wahl", optionen=STEUER35A), "lohnanteil": F("Lohnanteil", "ganz", einheit="%")},
     "konto": {"_tabelle": "konto", "_titel": lambda r: f"{r['bank']} {r['iban']}",
               "art": F("Art", "wahl", optionen=KONTOART), "bank": F("Bank"), "iban": F("IBAN", "iban"), "bic": F("BIC"),
               "zugang": F("Abruf", "wahl", optionen=ZUGANG)},
@@ -46,7 +49,8 @@ FELDER = {
     "gemeinschaft": {"_tabelle": "gemeinschaft", "_titel": lambda r: r["name"],
                      "nr": F("Nr."), "name": F("Name", pflicht=True), "strasse": F("Straße"), "plz": F("PLZ"), "ort": F("Ort"),
                      "glaeubiger_id": F("Gläubiger-ID")},
-    "buchung": {"_tabelle": "buchung", "_titel": lambda r: r["text"] or "Buchung", "text": F("Text")},
+    "buchung": {"_tabelle": "buchung", "_titel": lambda r: r["text"] or "Buchung", "text": F("Text"),
+                "lohn_cent": F("Arbeitskosten", "betrag")},
 }
 
 
@@ -79,6 +83,10 @@ def anzeige(fd, wert):
             return str(wert)
     if t == "iban":
         return bank.iban_format(wert)
+    if t == "betrag":
+        return rechnen.fmt(wert) + " €"
+    if t == "ganz" and fd["einheit"]:
+        return f"{wert} {fd['einheit']}"
     return str(wert)
 
 
@@ -99,9 +107,22 @@ def pruefen(art, feld, fd, roh, zeile):
             raise ValueError(f"{fd['name']} darf nicht negativ sein.")
         return w
     if t == "ganz":
+        roh = roh.replace(fd["einheit"], "").strip() if fd["einheit"] else roh
         if not roh.lstrip("-").isdigit():
             raise ValueError(f"{fd['name']}: bitte eine ganze Zahl eingeben.")
+        if fd["einheit"] == "%" and not 0 <= int(roh) <= 100:
+            raise ValueError(f"{fd['name']}: zwischen 0 und 100 %.")
         return int(roh)
+    if t == "betrag":
+        if not roh:
+            return None
+        try:
+            w = rechnen.parse_betrag(roh.replace("€", ""))
+        except ValueError:
+            raise ValueError(f"{fd['name']}: Betrag wie 1.234,56 eingeben.")
+        if art == "buchung" and feld == "lohn_cent" and w > abs(zeile["betrag_cent"]):
+            raise ValueError("Die Arbeitskosten können nicht höher sein als der Rechnungsbetrag.")
+        return abs(w)
     if t == "wahl":
         if roh not in dict(fd["optionen"]):
             raise ValueError(f"{fd['name']}: ungültige Auswahl.")
@@ -145,9 +166,9 @@ def zelle(art, obj, feld, klasse="", modus="anzeige", fehler="", roh=None):
     oid = obj["id"]
     wert = obj[feld]
     return Markup(render_template("_zelle.html", art=art, oid=oid, feld=feld, fd=fd, wert=wert,
-                                  text=anzeige(fd, wert), klasse=klasse + (" zahl" if fd["typ"] in ("zahl", "ganz") else ""),
+                                  text=anzeige(fd, wert), klasse=klasse + (" zahl" if fd["typ"] in ("zahl", "ganz", "betrag") else ""),
                                   modus=modus, fehler=fehler, roh=wert if roh is None else roh,
-                                  sortwert=wert if fd["typ"] in ("zahl", "ganz") else None))
+                                  sortwert=wert if fd["typ"] in ("zahl", "ganz", "betrag") else None))
 
 
 @bp.app_template_global("zelle")
@@ -252,21 +273,24 @@ def aktuelle_gemeinschaft():
 
 
 # ------------------------------------------------------------------ Darstellung je Benutzer
+# Akzentfarben wie in der Bauplattform: (Name, Farbe auf dunklem Grund, Farbe auf hellem Grund)
 FARBEN = {
-    "blau": ("Blau", "#1f5fa8", "#e6effa"),
-    "petrol": ("Petrol", "#0f6a70", "#ddf0f0"),
-    "gruen": ("Grün", "#1d7044", "#e3f3e9"),
-    "bordeaux": ("Bordeaux", "#8a2a3b", "#f6e5e8"),
-    "graphit": ("Graphit", "#39424f", "#e8ebef"),
+    "pink": ("Pink", "#ff5fb3", "#c2185b"),
+    "blau": ("Blau", "#6aa7ff", "#2f6fd6"),
+    "gruen": ("Grün", "#3ddc84", "#1f9d55"),
+    "orange": ("Orange", "#ffad5c", "#c46a10"),
+    "violett": ("Violett", "#b18cff", "#7a4fd6"),
+    "tuerkis": ("Türkis", "#2fd6c9", "#0f8f8f"),
 }
+SCHEMATA = {"dunkel": "Dunkel", "hell": "Hell", "auto": "wie das Gerät"}
 SCHRIFTEN = {
-    "standard": ("Standard", "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif"),
+    "standard": ("Ubuntu", "Ubuntu, 'Segoe UI', system-ui, -apple-system, sans-serif"),
     "klassisch": ("Klassisch", "'Segoe UI', Roboto, Helvetica, Arial, sans-serif"),
     "serifen": ("Mit Serifen", "Georgia, Cambria, 'Times New Roman', serif"),
 }
 GROESSEN = [13, 14, 15, 16, 17, 18]
 DICHTE = {"normal": "Normal", "kompakt": "Kompakt"}
-STANDARD = {"farbe": "blau", "schrift": "standard", "groesse": 15, "dichte": "normal"}
+STANDARD = {"schema": "dunkel", "farbe": "pink", "schrift": "standard", "groesse": 15, "dichte": "normal"}
 
 
 def darstellung(u=None):
@@ -277,8 +301,13 @@ def darstellung(u=None):
             d.update(json.loads(u["darstellung"] or "{}"))
         except (ValueError, IndexError, KeyError):
             pass
-    farbe = FARBEN.get(d["farbe"], FARBEN["blau"])
-    return {**d, "accent": farbe[1], "accent_bg": farbe[2], "schrift_css": SCHRIFTEN.get(d["schrift"], SCHRIFTEN["standard"])[1]}
+    if d["farbe"] not in FARBEN:          # ältere Einstellung (Blau, Petrol …) → nächstliegende Farbe
+        d["farbe"] = {"petrol": "tuerkis", "bordeaux": "pink", "graphit": "blau"}.get(d["farbe"], "pink")
+    if d.get("schema") not in SCHEMATA:
+        d["schema"] = "dunkel"
+    farbe = FARBEN[d["farbe"]]
+    return {**d, "akzent_dunkel": farbe[1], "akzent_hell": farbe[2],
+            "schrift_css": SCHRIFTEN.get(d["schrift"], SCHRIFTEN["standard"])[1]}
 
 
 def aktuelle_benutzer_sicher():
@@ -293,7 +322,8 @@ def fuer_mich():
     u = aktueller_benutzer()
     if request.method == "POST":
         d = {
-            "farbe": f("farbe") if f("farbe") in FARBEN else "blau",
+            "schema": f("schema") if f("schema") in SCHEMATA else "dunkel",
+            "farbe": f("farbe") if f("farbe") in FARBEN else "pink",
             "schrift": f("schrift") if f("schrift") in SCHRIFTEN else "standard",
             "groesse": int(f("groesse")) if f("groesse").isdigit() and int(f("groesse")) in GROESSEN else 15,
             "dichte": f("dichte") if f("dichte") in DICHTE else "normal",
@@ -301,7 +331,7 @@ def fuer_mich():
         db.ex("UPDATE benutzer SET darstellung = ? WHERE id = ?", (json.dumps(d), u["id"]))
         flash("Darstellung gespeichert – gilt nur für Sie.", "ok")
         return redirect("/fuer-mich")
-    return render_template("fuer_mich.html", d=darstellung(u), FARBEN=FARBEN, SCHRIFTEN=SCHRIFTEN, GROESSEN=GROESSEN, DICHTE=DICHTE)
+    return render_template("fuer_mich.html", d=darstellung(u), FARBEN=FARBEN, SCHEMATA=SCHEMATA, SCHRIFTEN=SCHRIFTEN, GROESSEN=GROESSEN, DICHTE=DICHTE)
 
 
 def kontext():

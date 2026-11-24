@@ -250,6 +250,34 @@ CREATE TABLE IF NOT EXISTS notfallregel (
     ansage TEXT NOT NULL DEFAULT ''
 );
 
+CREATE TABLE IF NOT EXISTS sonderumlage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gemeinschaft_id INTEGER NOT NULL REFERENCES gemeinschaft(id),
+    titel TEXT NOT NULL,
+    betrag_cent INTEGER NOT NULL,
+    schluessel TEXT NOT NULL DEFAULT 'mea',               -- mea | flaeche | einheiten
+    faellig TEXT NOT NULL,                                -- Fälligkeit (Datum)
+    beschluss_id INTEGER REFERENCES beschluss(id),
+    beschlossen_am TEXT NOT NULL DEFAULT '',
+    zweck TEXT NOT NULL DEFAULT 'ruecklage',              -- ruecklage | hausgeld  (auf welches Konto sie fließt)
+    angefordert TEXT NOT NULL DEFAULT ''                  -- Datum der Anforderung an die Eigentümer
+);
+
+CREATE TABLE IF NOT EXISTS mahnung (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gemeinschaft_id INTEGER NOT NULL REFERENCES gemeinschaft(id),
+    einheit_id INTEGER NOT NULL REFERENCES einheit(id),
+    person_id INTEGER REFERENCES person(id),
+    stufe INTEGER NOT NULL,                               -- 1 Zahlungserinnerung · 2 Mahnung · 3 letzte Mahnung
+    datum TEXT NOT NULL,
+    frist TEXT NOT NULL,
+    rueckstand_cent INTEGER NOT NULL,
+    gebuehr_cent INTEGER NOT NULL DEFAULT 0,
+    aufstellung TEXT NOT NULL DEFAULT '[]',               -- JSON: offene Posten zum Zeitpunkt der Mahnung
+    versand TEXT NOT NULL DEFAULT '',                     -- email | post
+    status TEXT NOT NULL DEFAULT 'offen'                  -- offen | bezahlt | storniert
+);
+
 CREATE TABLE IF NOT EXISTS ki_protokoll (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     zeit TEXT NOT NULL,
@@ -279,7 +307,16 @@ def connect(path=None):
 NACHTRAEGE = [
     ("benutzer", "darstellung", "TEXT NOT NULL DEFAULT '{}'"),
     ("gemeinschaft", "assistent", "INTEGER NOT NULL DEFAULT 0"),   # 0 = fertig, sonst offener Schritt des Assistenten
+    ("kostenart", "steuer35a", "TEXT NOT NULL DEFAULT ''"),        # '' | dienstleistung | handwerker | minijob
+    ("kostenart", "lohnanteil", "INTEGER NOT NULL DEFAULT 100"),   # % der Kosten, die Arbeitskosten sind (§ 35a)
+    ("buchung", "lohn_cent", "INTEGER"),                           # Arbeitskosten laut Rechnung (überschreibt den Anteil)
+    ("buchung", "sonderumlage_id", "INTEGER REFERENCES sonderumlage(id)"),
 ]
+
+# Vorbelegung § 35a für Kostenarten, die vor dieser Funktion angelegt wurden (Name → Einordnung, Lohnanteil %)
+VORBELEGUNG_35A = {"hausmeister": ("dienstleistung", 100), "reinigung": ("dienstleistung", 100),
+                   "garten": ("dienstleistung", 100), "winterdienst": ("dienstleistung", 100),
+                   "aufzug": ("handwerker", 70), "instandhaltung": ("handwerker", 50), "wartung": ("handwerker", 70)}
 
 
 def init():
@@ -291,6 +328,12 @@ def init():
             vorhanden = {r["name"] for r in con.execute(f"PRAGMA table_info({tabelle})")}
             if spalte not in vorhanden:
                 con.execute(f"ALTER TABLE {tabelle} ADD COLUMN {spalte} {definition}")
+                if (tabelle, spalte) == ("kostenart", "steuer35a"):
+                    for r in con.execute("SELECT id, name FROM kostenart").fetchall():
+                        for wort, (art, anteil) in VORBELEGUNG_35A.items():
+                            if wort in r["name"].lower():
+                                con.execute("UPDATE kostenart SET steuer35a = ?, lohnanteil = ? WHERE id = ?", (art, anteil, r["id"]))
+                                break
         con.commit()
         con.close()
 

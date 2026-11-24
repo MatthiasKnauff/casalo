@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block titel %}Mahnwesen{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}">WEG {{ g.name }}</a></p>
+  <h1>Mahnwesen</h1><p class="unter">Rückstände aus Hausgeld und Sonderumlagen · Zahlungserinnerung → Mahnung → letzte Mahnung</p></div></div>
+{% if post_ids %}<p class="hinweis"><a class="knopf" href="/g/{{ g.id }}/mahnungen.pdf?ids={{ post_ids }}" target="_blank">Briefe für die Post (PDF)</a></p>{% endif %}
+<section class="karte eng"><form method="post" id="mahnen"><div class="scroll"><table class="tab" data-tab="mahnwesen">
+  <thead><tr><th data-nosort data-name="Auswahl"></th><th>Einheit</th><th>Eigentümer</th><th class="zahl">Rückstand</th><th>älteste Forderung</th><th>bisher</th><th>Vorschlag</th></tr></thead><tbody>
+  {% for z in zeilen %}
+  <tr data-karte="/karte/einheit/{{ z.einheit.id }}">
+    <td>{% if z.stufe %}<input type="checkbox" name="einheit" value="{{ z.einheit.id }}" checked aria-label="{{ z.einheit.nr }} mahnen">{% endif %}</td>
+    <td><b>{{ z.einheit.nr }}</b></td><td>{{ z.eigentuemer }}</td>
+    <td class="zahl {{ 'rot' if z.summe > 0 }}" data-sort="{{ z.summe }}">{{ z.summe|eur }}</td>
+    <td>{% if z.posten %}{{ z.posten[0].text }} <span class="muted klein">seit {{ z.posten[0].faellig|datum }}</span>{% endif %}</td>
+    <td>{% if z.letzte %}{{ stufen[z.letzte.stufe] }} <span class="muted klein">{{ z.letzte.datum|datum }}</span>{% else %}<span class="muted">–</span>{% endif %}</td>
+    <td>{% if z.stufe %}<span class="chip {{ 'fehler' if z.stufe == 3 else 'warnung' }}">{{ stufen[z.stufe] }}</span>{% else %}<span class="klein muted">{{ z.grund }}</span>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="7" class="leer">Keine Rückstände – alle Einheiten haben bezahlt.</td></tr>{% endfor %}
+</tbody></table></div>
+{% if zeilen|selectattr('stufe')|list %}<p style="padding:0 14px 14px"><button data-frage="Mahnschreiben für die gewählten Einheiten erstellen und per E-Mail versenden?" data-ok="Erstellen">Gewählte mahnen</button>
+<span class="klein muted">E-Mail an Eigentümer mit Versandweg E-Mail, sonst Brief (PDF).</span></p>{% endif %}
+</form></section>
+
+<section class="karte eng"><h2 style="padding:14px 14px 0">Verlauf</h2><div class="scroll"><table class="tab" data-tab="mahnungen">
+  <thead><tr><th>Datum</th><th>Einheit</th><th>Empfänger</th><th>Stufe</th><th class="zahl">Rückstand</th><th class="zahl">Gebühr</th><th>Frist</th><th>Weg</th><th>Status</th><th data-nosort data-name="Aktionen"></th></tr></thead><tbody>
+  {% for m in verlauf %}
+  <tr><td data-sort="{{ m.datum }}">{{ m.datum|datum }}</td><td>{{ m.e_nr }}</td><td>{{ m.firma or ((m.vorname or '') ~ ' ' ~ (m.nachname or '')).strip() }}</td>
+    <td>{{ stufen[m.stufe] }}</td><td class="zahl">{{ m.rueckstand_cent|eur }}</td><td class="zahl">{{ m.gebuehr_cent|eur }}</td>
+    <td>{{ m.frist|datum }}</td><td>{{ 'E-Mail' if m.versand == 'email' else 'Post' }}</td>
+    <td><span class="chip {{ 'ok' if m.status == 'bezahlt' else 'fehler' if m.status == 'offen' else '' }}">{{ m.status }}</span></td>
+    <td class="zeile"><a class="klein" href="/g/{{ g.id }}/mahnungen.pdf?ids={{ m.id }}" target="_blank">PDF</a>
+      {% if m.status == 'offen' %}<form method="post" action="/mahnung/{{ m.id }}/status" class="inline"><input type="hidden" name="status" value="storniert"><button class="klein zweit">stornieren</button></form>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="10" class="leer">Noch keine Mahnungen.</td></tr>{% endfor %}
+</tbody></table></div></section>
+
+{% if benutzer.rolle == 'admin' %}
+<section class="karte"><h2>Einstellungen (alle Gemeinschaften)</h2>
+  <form method="post" action="/mahnwesen/einstellungen"><div class="felder">
+    <div><label>Zahlungsfrist (Tage)</label><input name="frist_tage" value="{{ einstellungen.frist_tage }}" inputmode="numeric"></div>
+    <div><label>Mahnen ab Rückstand</label><input name="schwelle" value="{{ einstellungen.schwelle|betrag }}" inputmode="decimal"></div>
+    <div><label>Gebühr Erinnerung</label><input name="gebuehr_1" value="{{ einstellungen.gebuehr[1]|betrag }}" inputmode="decimal"></div>
+    <div><label>Gebühr Mahnung</label><input name="gebuehr_2" value="{{ einstellungen.gebuehr[2]|betrag }}" inputmode="decimal"></div>
+    <div><label>Gebühr letzte Mahnung</label><input name="gebuehr_3" value="{{ einstellungen.gebuehr[3]|betrag }}" inputmode="decimal"></div>
+  </div>
+  <p class="hinweis">Mahngebühren nur, wenn die Gemeinschaft sie beschlossen hat (§ 21 Abs. 7 a. F. / § 19 WEG). Gezahlt wird ältestes zuerst; ist alles beglichen, wird die laufende Mahnung automatisch „bezahlt“.</p>
+  <p><button>Speichern</button></p></form></section>
+{% endif %}
+{% endblock %}

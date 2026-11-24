@@ -11,11 +11,12 @@
   <p class="hinweis" style="margin-top:-6px">Bankumsätze werden unter „Bank &amp; Hausgeld“ zugeordnet – hier nur Buchungen ohne Bankumsatz (z. B. Barzahlung, Umbuchung).</p>
   <form method="post"><div class="felder">
     <div><label>Datum</label><input type="date" name="datum" required></div>
-    <div><label>Art</label><select name="art"><option value="kosten">Kosten</option><option value="hausgeld">Hausgeld-Eingang</option><option value="sonstig">Sonstiges / Umbuchung</option></select></div>
+    <div><label>Art</label><select name="art"><option value="kosten">Kosten</option><option value="hausgeld">Hausgeld-Eingang</option>{% if umlagen %}<option value="sonderumlage">Sonderumlage-Eingang</option>{% endif %}<option value="sonstig">Sonstiges / Umbuchung</option></select></div>
     <div><label>Richtung</label><select name="richtung"><option value="aus">Ausgang</option><option value="ein">Eingang</option></select></div>
     <div><label>Betrag</label><input name="betrag" placeholder="0,00" required></div>
     <div><label>Konto</label><select name="konto_id"><option value="">–</option>{% for k in konten %}<option value="{{ k.id }}">{{ 'Rücklage' if k.art == 'ruecklage' else 'Hausgeld' }} · {{ k.bank }}</option>{% endfor %}</select></div>
     <div><label>Kostenart</label><select name="kostenart_id"><option value="">–</option>{% for k in kostenarten %}<option value="{{ k.id }}">{{ k.name }}</option>{% endfor %}</select></div>
+    {% if umlagen %}<div><label>Sonderumlage</label><select name="sonderumlage_id"><option value="">–</option>{% for x in umlagen %}<option value="{{ x.id }}">{{ x.titel }}</option>{% endfor %}</select></div>{% endif %}
     <div><label>Einheit</label><select name="einheit_id"><option value="">–</option>{% for e in einheiten %}<option value="{{ e.id }}">{{ e.nr }}</option>{% endfor %}</select></div>
     <div style="grid-column: span 2"><label>Text</label><input name="text"></div>
   </div>
@@ -23,13 +24,14 @@
   <p><button>Buchen</button></p></form>
 </section>
 <section class="karte eng"><div class="scroll"><table class="tab" data-tab="buchungen">
-  <thead><tr><th>Datum</th><th>Art</th><th>Text</th><th>Kostenart / Einheit</th><th>Konto</th><th class="zahl">Betrag</th><th data-nosort data-name="Aktionen"></th></tr></thead><tbody>
+  <thead><tr><th>Datum</th><th>Art</th><th>Text</th><th>Kostenart / Einheit</th><th>Konto</th><th class="zahl">Betrag</th><th class="zahl" title="Arbeitskosten laut Rechnung für § 35a – leer: Lohnanteil der Kostenart">davon Lohn</th><th data-nosort data-name="Aktionen"></th></tr></thead><tbody>
   {% for b in buchungen %}
-  <tr{% if b.einheit_id %} data-karte="/karte/einheit/{{ b.einheit_id }}"{% endif %}><td style="white-space:nowrap" data-sort="{{ b.datum }}">{{ b.datum|datum }}</td><td>{{ {'kosten':'Kosten','hausgeld':'Hausgeld','sonstig':'Sonstiges'}[b.art] }}</td>
+  <tr{% if b.einheit_id %} data-karte="/karte/einheit/{{ b.einheit_id }}"{% endif %}><td style="white-space:nowrap" data-sort="{{ b.datum }}">{{ b.datum|datum }}</td><td>{{ {'kosten':'Kosten','hausgeld':'Hausgeld','sonstig':'Sonstiges','sonderumlage':'Sonderumlage'}.get(b.art, b.art) }}</td>
       {{ zelle('buchung', b, 'text') }}<td>{{ b.ka_name or '' }}{{ b.e_nr or '' }}</td>
       <td class="muted">{{ ('Rücklage' if b.konto_art == 'ruecklage' else 'Hausgeld') if b.konto_art else '' }}</td>
       <td class="zahl {{ 'rot' if b.betrag_cent < 0 }}" data-sort="{{ b.betrag_cent }}">{{ b.betrag_cent|eur }}</td>
+      {% if b.art == 'kosten' and b.ka_35a %}{{ zelle('buchung', b, 'lohn_cent') }}{% else %}<td></td>{% endif %}
       <td><form method="post" action="/buchung/{{ b.id }}/loeschen" data-frage="Buchung über {{ b.betrag_cent|eur }} löschen?" data-ok="Löschen"><button class="klein gefahr" aria-label="Löschen">✕</button></form></td></tr>
-  {% else %}<tr><td colspan="7" class="leer">Keine Buchungen in {{ jahr }}.</td></tr>{% endfor %}
+  {% else %}<tr><td colspan="8" class="leer">Keine Buchungen in {{ jahr }}.</td></tr>{% endfor %}
 </tbody></table></div></section>
 {% endblock %}
