@@ -142,13 +142,14 @@
 {% elif tab == 'finanzen' %}
 <section class="karte eng">
   <table>
-    <tr><th>Jahr</th><th>Wirtschaftsplan</th><th>Jahresabrechnung</th><th>Heizkosten</th></tr>
+    <tr><th>Jahr</th><th>Wirtschaftsplan</th><th>Jahresabrechnung</th><th>Heizkosten</th><th>Steuer</th></tr>
     {% for j in jahre %}
     <tr><td><b>{{ j }}</b></td>
       <td><a href="/g/{{ g.id }}/wirtschaftsplan/{{ j }}">{{ 'öffnen' if wps.get(j) else 'anlegen' }}</a>
         {% if wps.get(j) and wps[j].beschlossen_am %} <span class="chip ok">beschlossen {{ wps[j].beschlossen_am|datum }}</span>{% elif wps.get(j) %} <span class="chip warnung">Entwurf</span>{% endif %}</td>
       <td>{% if j <= jahr %}<a href="/g/{{ g.id }}/abrechnung/{{ j }}">öffnen</a>{% else %}<span class="muted">–</span>{% endif %}</td>
-      <td>{% if j <= jahr %}<a href="/g/{{ g.id }}/heizkosten/{{ j }}">{{ 'Messdienst-Datei' if g.heizkosten_modus == 'messdienst' else 'Verbrauch' }}</a>{% endif %}</td></tr>
+      <td>{% if j <= jahr %}<a href="/g/{{ g.id }}/heizkosten/{{ j }}">{{ 'Messdienst-Datei' if g.heizkosten_modus == 'messdienst' else 'Verbrauch' }}</a>{% endif %}</td>
+      <td>{% if j <= jahr %}<a href="/g/{{ g.id }}/steuer35a/{{ j }}">§ 35a</a> · <a href="/g/{{ g.id }}/datev?jahr={{ j }}">DATEV</a>{% endif %}</td></tr>
     {% endfor %}
   </table>
 </section>

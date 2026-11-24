@@ -55,7 +55,7 @@ def buchungen(gid):
                (f_int("sonderumlage_id") or None) if art == "sonderumlage" else None))
         flash("Gebucht.", "ok")
         return redirect(f"/g/{gid}/buchungen?jahr={jahr}")
-    rows = db.q("SELECT b.*, k.name AS ka_name, k.steuer35a AS ka_35a, e.nr AS e_nr, ko.art AS konto_art, ko.bank AS konto_bank "
+    rows = db.q("SELECT b.*, (SELECT MIN(x.id) FROM beleg x WHERE x.buchung_id = b.id) AS beleg_id, k.name AS ka_name, k.steuer35a AS ka_35a, e.nr AS e_nr, ko.art AS konto_art, ko.bank AS konto_bank "
                 "FROM buchung b LEFT JOIN kostenart k ON k.id = b.kostenart_id LEFT JOIN einheit e ON e.id = b.einheit_id "
                 "LEFT JOIN konto ko ON ko.id = b.konto_id WHERE b.gemeinschaft_id = ? AND b.datum BETWEEN ? AND ? "
                 "ORDER BY b.datum DESC, b.id DESC", (gid, f"{jahr}-01-01", f"{jahr}-12-31"))
@@ -151,6 +151,7 @@ def abrechnung(gid, jahr):
     for e in einheiten:
         e["eigentuemer"] = daten.eigentuemer_text(e["id"])
     return render_template("abrechnung.html", g=g, jahr=jahr, a=a, einheiten=einheiten,
+                           im_portal=db.setting(f"portal_abrechnung_{gid}_{jahr}", ""),
                            einheit_sel=request.args.get("einheit", type=int))
 
 
@@ -216,12 +217,26 @@ def abrechnung_versand(gid, jahr):
             mails += 1
         except mail.MailFehler as ex:
             fehler.append(str(ex))
+    db.set_setting(f"portal_abrechnung_{gid}_{jahr}", datetime.date.today().isoformat())     # ab jetzt im Eigentümerportal
     if mails:
         flash(f"{mails} Abrechnungen per E-Mail versandt.", "ok")
     if post:
         flash(f"{post} Eigentümer bekommen Post – Druckdatei unten bei „Für den Postversand“.", "ok")
     for x in fehler[:5]:
         flash(x, "fehler")
+    return redirect(f"/g/{gid}/abrechnung/{jahr}")
+
+
+@bp.post("/g/<int:gid>/abrechnung/<int:jahr>/portal")
+def abrechnung_portal(gid, jahr):
+    gemeinschaft_oder_404(gid)
+    schluessel = f"portal_abrechnung_{gid}_{jahr}"
+    if request.form.get("zeigen"):
+        db.set_setting(schluessel, datetime.date.today().isoformat())
+        flash(f"Abrechnung {jahr} ist im Eigentümerportal sichtbar.", "ok")
+    else:
+        db.ex("DELETE FROM einstellung WHERE schluessel = ?", (schluessel,))
+        flash(f"Abrechnung {jahr} aus dem Eigentümerportal genommen.", "ok")
     return redirect(f"/g/{gid}/abrechnung/{jahr}")
 
 

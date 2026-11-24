@@ -76,12 +76,21 @@ def uebersicht():
             fristen.append({"datum": datetime.date(heute.year, 12, 31), "art": "warnung",
                             "was": f"{g['name']}: Wirtschaftsplan {heute.year + 1} fehlt noch",
                             "link": f"/g/{g['id']}/wirtschaftsplan/{heute.year + 1}"})
+    from .v_betrieb import faellige_wartungen
+    fw = faellige_wartungen(30)
+    for w in fw["termine"]:
+        d = datetime.date.fromisoformat(w["naechste"])
+        fristen.append({"datum": d, "art": "fehler" if d < heute else "warnung",
+                        "was": f"{w['g_name']}: {w['titel']} fällig", "link": f"/g/{w['gemeinschaft_id']}/wartung"})
+    for w in fw["kuendigung"]:
+        fristen.append({"datum": datetime.date.fromisoformat(w["kuendigen_bis"]), "art": "warnung",
+                        "was": f"{w['g_name']}: Vertrag „{w['titel']}“ – Kündigungsfrist", "link": f"/g/{w['gemeinschaft_id']}/wartung"})
     fristen.sort(key=lambda x: x["datum"])
     konten_tan = db.q("SELECT k.*, g.name AS g_name FROM konto k JOIN gemeinschaft g ON g.id = k.gemeinschaft_id "
                       "WHERE k.fints_zustand != ''")
     vorgaenge = db.q("SELECT v.*, g.name AS g_name FROM vorgang v LEFT JOIN gemeinschaft g ON g.id = v.gemeinschaft_id "
                      "WHERE v.status = 'offen' ORDER BY (v.notfallart != '') DESC, v.angelegt DESC LIMIT 8")
-    return render_template("uebersicht.html", kz=kz, anrufe=anrufe, fristen=fristen[:8], konten_tan=konten_tan,
+    return render_template("uebersicht.html", kz=kz, anrufe=anrufe, fristen=fristen[:10], konten_tan=konten_tan,
                            vorgaenge=vorgaenge, heute=heute)
 
 
@@ -136,6 +145,15 @@ def einstellungen():
                 except mail.MailFehler as e:
                     flash(str(e), "fehler")
                     return redirect("/einstellungen")
+        elif bereich == "datev":
+            for k in ("datev_berater", "datev_mandant", "datev_erloes_hausgeld", "datev_erloes_umlage", "datev_konto_sonstig", "datev_kosten_standard"):
+                if f(k) and not f(k).isdigit():
+                    flash("DATEV-Angaben nur als Ziffern.", "fehler")
+                    return redirect("/einstellungen")
+                db.set_setting(k, f(k))
+        elif bereich == "portal":
+            db.set_setting("portal_aktiv", "1" if request.form.get("portal_aktiv") else "0")
+            db.set_setting("portal_belege", "1" if request.form.get("portal_belege") else "0")
         elif bereich == "benutzer":
             pw = request.form.get("passwort", "")
             if not f("name") or "@" not in f("email") or len(pw) < 10:
@@ -160,6 +178,7 @@ def einstellungen():
     werte = {k: db.setting(k) for k in ("verwaltung_name", "verwaltung_anschrift", "fints_produkt_id", "smtp_host",
                                         "smtp_port", "smtp_user", "smtp_absender")}
     werte["smtp_pass_gesetzt"] = bool(db.setting("smtp_pass"))
+    werte |= {k: db.setting(k) for k in ("datev_berater", "datev_mandant", "datev_erloes_hausgeld", "datev_erloes_umlage", "datev_konto_sonstig", "datev_kosten_standard") + ("portal_aktiv", "portal_belege")}
     return render_template("einstellungen.html", w=werte, benutzerliste=db.q("SELECT * FROM benutzer ORDER BY name"))
 
 

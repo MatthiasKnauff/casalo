@@ -1,0 +1,53 @@
+{% extends "portal_base.html" %}
+{% block titel %}Übersicht{% endblock %}
+{% block kopf %}<div class="kopf-rechts"><span class="portal-unter">{{ p.firma or (p.vorname ~ ' ' ~ p.nachname) }}</span>
+  <form method="post" action="/portal/abmelden"><input type="hidden" name="_csrf" value="{{ csrf_token }}"><button class="icon" aria-label="Abmelden" title="Abmelden">⎋</button></form></div>{% endblock %}
+{% block inhalt %}
+{% for e in einheiten %}
+<h1>WEG {{ e.g_name }} · Einheit {{ e.nr }}</h1>
+<p class="unter">{{ e.g_strasse }}, {{ e.g_plz }} {{ e.g_ort }}{% if e.lage %} · {{ e.lage }}{% endif %} · {{ e.wohnflaeche|zahl }} m² · {{ e.mea|zahl }} MEA</p>
+<div class="raster">
+  <div class="kachel"><span class="klein muted">Hausgeld monatlich</span><b>{{ e.monat|eur if e.monat is not none else '–' }}</b>
+    <span class="klein muted">{{ 'per Lastschrift' if p.zahlweise == 'lastschrift' else 'per Überweisung' }}</span></div>
+  <div class="kachel"><span class="klein muted">offen</span><b class="{{ 'rot' if e.offen > 0 else 'gruen' }}">{{ e.offen|eur }}</b>
+    <span class="klein muted">{{ 'alles bezahlt' if e.offen <= 0 else e.posten|length ~ ' Posten' }}</span></div>
+  {% if e.versammlungen %}{% set v = e.versammlungen[0] %}<div class="kachel"><span class="klein muted">nächste Versammlung</span><b>{{ v.beginn[:10]|datum }}</b><span class="klein muted">{{ v.beginn[11:16] }} Uhr · {{ v.ort }}</span></div>{% endif %}
+</div>
+{% if e.posten %}
+<section class="karte eng"><h2 style="padding:14px 14px 0">Offene Zahlungen</h2><div class="scroll"><table>
+  <tr><th>Forderung</th><th>fällig</th><th class="zahl">offen</th></tr>
+  {% for x in e.posten %}<tr><td>{{ x.text }}</td><td>{{ x.faellig|datum }}</td><td class="zahl">{{ x.betrag|eur }}</td></tr>{% endfor %}
+</table></div>
+{% if e.konto and p.zahlweise != 'lastschrift' %}<p class="hinweis" style="padding:0 14px">Konto der Gemeinschaft: IBAN {{ e.konto.iban }}{% if e.konto.bank %} ({{ e.konto.bank }}){% endif %} · Verwendungszweck „Hausgeld {{ e.nr }}“</p>{% endif %}
+</section>{% endif %}
+<div class="raster">
+<section class="karte eng"><h2 style="padding:14px 14px 0">Dokumente</h2>
+  <table>{% for d in e.dokumente %}<tr><td><a href="{{ d.url }}" target="_blank">{{ d.titel }}</a></td><td class="muted klein zahl">{{ d.datum|datum }}</td></tr>
+  {% else %}<tr><td class="leer">Noch keine Dokumente freigegeben.</td></tr>{% endfor %}</table></section>
+<section class="karte eng"><h2 style="padding:14px 14px 0">Beschluss-Sammlung</h2>
+  <table>{% for b in e.beschluesse %}<tr><td><b>{{ b.lfd }}</b></td><td class="klein">{{ b.datum|datum }}</td><td class="klein">{{ b.text }}<div class="muted">{{ b.ergebnis }}</div></td></tr>
+  {% else %}<tr><td class="leer">Noch keine Beschlüsse.</td></tr>{% endfor %}</table></section>
+</div>
+{% if e.belege %}
+<section class="karte eng"><h2 style="padding:14px 14px 0">Belege der Gemeinschaft</h2><div class="scroll"><table>
+  <tr><th>Beleg</th><th>Buchung</th><th class="zahl">Betrag</th></tr>
+  {% for b in e.belege %}<tr><td><a href="/portal/beleg/{{ b.id }}" target="_blank">{{ b.nr }}</a></td><td class="klein">{% if b.datum %}{{ b.datum|datum }} · {{ b.b_text }}{% endif %}</td><td class="zahl">{{ b.betrag_cent|eur if b.betrag_cent is not none }}</td></tr>{% endfor %}
+</table></div></section>{% endif %}
+{% if e.vorgaenge %}
+<section class="karte eng"><h2 style="padding:14px 14px 0">Ihre Meldungen</h2><table>
+  {% for v in e.vorgaenge %}<tr><td>{{ v.titel }}</td><td class="klein muted">{{ v.angelegt[:10]|datum }}</td><td><span class="chip {{ 'ok' if v.status == 'erledigt' else 'warnung' }}">{{ 'erledigt' if v.status == 'erledigt' else 'in Bearbeitung' }}</span></td></tr>{% endfor %}
+</table></section>{% endif %}
+{% endfor %}
+
+<section class="karte" id="melden"><h2>Nachricht an die Verwaltung</h2>
+  <form method="post" action="/portal/meldung"><input type="hidden" name="_csrf" value="{{ csrf_token }}">
+  <div class="felder">
+    <div><label>Einheit</label><select name="einheit_id">{% for e in einheiten %}<option value="{{ e.id }}">{{ e.g_name }} · {{ e.nr }}</option>{% endfor %}</select></div>
+    <div><label>Worum geht es?</label><select name="art"><option value="schaden">Schaden / Mangel melden</option><option value="frage">Frage</option><option value="kontakt">Kontaktdaten ändern</option></select></div>
+    <div style="grid-column: span 2"><label>Betreff</label><input name="titel" maxlength="120" placeholder="z. B. Licht im Treppenhaus defekt"></div>
+  </div>
+  <label>Beschreibung</label><textarea name="text" required placeholder="Wo genau, seit wann, wie erreichbar?"></textarea>
+  <p><button>Senden</button></p></form>
+  <p class="hinweis">Bei Notfällen (Wasserrohrbruch, Gasgeruch, Heizungsausfall im Winter) bitte anrufen.</p>
+</section>
+{% endblock %}

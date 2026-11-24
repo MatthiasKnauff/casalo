@@ -1,0 +1,6 @@
+{% with art='Wartung', titel=w.titel, seite='/g/' ~ w.gemeinschaft_id ~ '/wartung' %}{% include "karten/_kopf.html" %}{% endwith %}
+<table class="kv-tab">
+  {% for feld, name in [('titel','Wartung'),('intervall_monate','Intervall'),('letzte','Zuletzt'),('naechste','Nächste'),('pflicht','Grundlage'),('vertrag_bis','Vertrag bis'),('kuendigung_monate','Kündigungsfrist'),('kosten_jahr_cent','Kosten/Jahr'),('notiz','Notiz')] %}
+  <tr><th>{{ name }}</th>{{ zelle('wartung', w, feld) }}</tr>{% endfor %}
+</table>
+{% if auftraege %}<h3>Aufträge</h3><ul class="karte-liste">{% for a in auftraege %}<li><a href="/auftrag/{{ a.id }}">{{ a.nr }}</a> <span class="muted klein">{{ a.status }}{% if a.erledigt_am %} · {{ a.erledigt_am|datum }}{% endif %}</span></li>{% endfor %}</ul>{% endif %}

@@ -1,0 +1,10 @@
+{% with art='Auftrag ' ~ a.nr, titel=a.titel, unter=(a.firma or 'noch kein Dienstleister') ~ ' · ' ~ stati[a.status], seite='/auftrag/' ~ a.id %}{% include "karten/_kopf.html" %}{% endwith %}
+<table class="kv-tab">
+  <tr><th>Leistung</th>{{ zelle('auftrag', a, 'titel') }}</tr>
+  <tr><th>Beschreibung</th>{{ zelle('auftrag', a, 'text') }}</tr>
+  <tr><th>Termin</th>{{ zelle('auftrag', a, 'termin') }}</tr>
+  <tr><th>Angebot</th>{{ zelle('auftrag', a, 'angebot_cent') }}</tr>
+  <tr><th>Rechnung</th>{{ zelle('auftrag', a, 'rechnung_cent') }}</tr>
+  {% if a.d_tel %}<tr><th>Telefon</th><td>{{ a.d_tel }}</td></tr>{% endif %}
+</table>
+<p><a class="knopf klein" href="/auftrag/{{ a.id }}">Auftrag öffnen</a></p>

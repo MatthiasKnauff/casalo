@@ -54,7 +54,7 @@ h3 { font-size: 15px; margin: 16px 0 8px; }
 .karte { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 18px; }
 .karte.eng { padding: 8px 8px 4px; }
 .karte.eng > h2 { padding: 10px 12px 0; }
-.raster { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
+.raster { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; margin-bottom: 18px; }
 .raster .karte { margin-bottom: 0; }
 .kz { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-bottom: 18px; }
 .kz .karte { margin: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -264,3 +264,10 @@ td.fett { font-weight: 650; white-space: nowrap; }
 .kachel b { font-size: 22px; font-variant-numeric: tabular-nums; }
 th { color: var(--muted); }
 .karte h2 { font-weight: 650; }
+
+/* ---------------------------------------------------------------- Eigentümerportal */
+.portal-inhalt { max-width: 1000px; margin: 0 auto; padding: 24px 16px 60px; }
+.portal-schmal { max-width: 480px; margin: 40px auto; }
+.portal-unter { color: rgba(255,255,255,.85); font-size: 14px; }
+.portal .kopf-rechts form { display: inline; }
+.portal h1 { margin-top: 14px; }

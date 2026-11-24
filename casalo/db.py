@@ -278,6 +278,82 @@ CREATE TABLE IF NOT EXISTS mahnung (
     status TEXT NOT NULL DEFAULT 'offen'                  -- offen | bezahlt | storniert
 );
 
+CREATE TABLE IF NOT EXISTS dienstleister (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    firma TEXT NOT NULL,
+    gewerk TEXT NOT NULL DEFAULT '',
+    ansprechpartner TEXT NOT NULL DEFAULT '',
+    telefon TEXT NOT NULL DEFAULT '',
+    notdienst TEXT NOT NULL DEFAULT '',                   -- Notdienst-Nummer (für Notfallregeln und das KI-Telefon)
+    email TEXT NOT NULL DEFAULT '',
+    strasse TEXT NOT NULL DEFAULT '',
+    plz TEXT NOT NULL DEFAULT '',
+    ort TEXT NOT NULL DEFAULT '',
+    iban TEXT NOT NULL DEFAULT '',
+    stichworte TEXT NOT NULL DEFAULT '',                  -- für den Bankabgleich
+    notiz TEXT NOT NULL DEFAULT '',
+    aktiv INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS auftrag (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gemeinschaft_id INTEGER NOT NULL REFERENCES gemeinschaft(id),
+    einheit_id INTEGER REFERENCES einheit(id),
+    vorgang_id INTEGER REFERENCES vorgang(id),
+    dienstleister_id INTEGER REFERENCES dienstleister(id),
+    wartung_id INTEGER REFERENCES wartung(id),
+    nr TEXT NOT NULL,                                     -- A-2026-001
+    titel TEXT NOT NULL,
+    text TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'entwurf',               -- entwurf | beauftragt | erledigt | abgerechnet | storniert
+    angelegt TEXT NOT NULL,
+    beauftragt_am TEXT NOT NULL DEFAULT '',
+    termin TEXT NOT NULL DEFAULT '',
+    erledigt_am TEXT NOT NULL DEFAULT '',
+    angebot_cent INTEGER,
+    kostenart_id INTEGER REFERENCES kostenart(id),
+    rechnung_nr TEXT NOT NULL DEFAULT '',
+    rechnung_cent INTEGER,
+    buchung_id INTEGER REFERENCES buchung(id)
+);
+
+CREATE TABLE IF NOT EXISTS wartung (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gemeinschaft_id INTEGER NOT NULL REFERENCES gemeinschaft(id),
+    dienstleister_id INTEGER REFERENCES dienstleister(id),
+    kostenart_id INTEGER REFERENCES kostenart(id),
+    titel TEXT NOT NULL,                                  -- z. B. Aufzug, Heizung, Rauchwarnmelder, Dachrinnen
+    intervall_monate INTEGER NOT NULL DEFAULT 12,
+    letzte TEXT NOT NULL DEFAULT '',
+    naechste TEXT NOT NULL DEFAULT '',
+    pflicht TEXT NOT NULL DEFAULT '',                     -- gesetzliche Grundlage, z. B. BetrSichV § 16
+    vertrag_bis TEXT NOT NULL DEFAULT '',
+    kuendigung_monate INTEGER NOT NULL DEFAULT 3,
+    kosten_jahr_cent INTEGER NOT NULL DEFAULT 0,
+    notiz TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS beleg (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gemeinschaft_id INTEGER NOT NULL REFERENCES gemeinschaft(id),
+    buchung_id INTEGER REFERENCES buchung(id),
+    auftrag_id INTEGER REFERENCES auftrag(id),
+    nr TEXT NOT NULL,                                     -- B-2026-0001 (je Gemeinschaft und Jahr fortlaufend)
+    name TEXT NOT NULL,
+    datei TEXT NOT NULL,                                  -- Dateiname in DATA_DIR/belege
+    mime TEXT NOT NULL,
+    groesse INTEGER NOT NULL,
+    hochgeladen TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS portal_zugang (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    person_id INTEGER NOT NULL REFERENCES person(id),
+    token_hash TEXT NOT NULL UNIQUE,
+    gueltig_bis TEXT NOT NULL,
+    benutzt TEXT NOT NULL DEFAULT ''
+);
+
 CREATE TABLE IF NOT EXISTS ki_protokoll (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     zeit TEXT NOT NULL,
@@ -311,6 +387,10 @@ NACHTRAEGE = [
     ("kostenart", "lohnanteil", "INTEGER NOT NULL DEFAULT 100"),   # % der Kosten, die Arbeitskosten sind (§ 35a)
     ("buchung", "lohn_cent", "INTEGER"),                           # Arbeitskosten laut Rechnung (überschreibt den Anteil)
     ("buchung", "sonderumlage_id", "INTEGER REFERENCES sonderumlage(id)"),
+    ("buchung", "dienstleister_id", "INTEGER REFERENCES dienstleister(id)"),
+    ("kostenart", "datev_konto", "TEXT NOT NULL DEFAULT ''"),      # Sachkonto für den DATEV-Export
+    ("konto", "datev_konto", "TEXT NOT NULL DEFAULT ''"),          # Finanzkonto (Bank) für den DATEV-Export
+    ("vorgang", "auftrag_id", "INTEGER"),
 ]
 
 # Vorbelegung § 35a für Kostenarten, die vor dieser Funktion angelegt wurden (Name → Einordnung, Lohnanteil %)
@@ -374,6 +454,9 @@ DEFAULTS = {
     "smtp_host": "", "smtp_port": "587", "smtp_user": "", "smtp_pass": "", "smtp_absender": "",
     "fints_produkt_id": "",
     "anonymisieren": "1",
+    "datev_berater": "", "datev_mandant": "", "datev_erloes_hausgeld": "8000", "datev_erloes_umlage": "8010",
+    "datev_konto_sonstig": "1590", "datev_kosten_standard": "4900",
+    "portal_aktiv": "1", "portal_belege": "0",
 }
 
 

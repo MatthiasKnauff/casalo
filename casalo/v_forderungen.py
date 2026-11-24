@@ -112,7 +112,7 @@ def sonderumlage_versand(uid):
         try:
             mail.senden(p["email"], f"Sonderumlage „{u['titel']}“ – {g['name']}, Einheit {e['nr']}",
                         f"Guten Tag,\n\nanbei erhalten Sie die Anforderung der Sonderumlage „{u['titel']}“ für Ihre Einheit "
-                        f"{e['nr']}: {rechnen.fmt(anteil)} €, fällig am {datetime.date.fromisoformat(u['faellig']):%d.%m.%Y}.\n\n"
+                        f"{e['nr']}: {rechnen.fmt(anteil)}, fällig am {datetime.date.fromisoformat(u['faellig']):%d.%m.%Y}.\n\n"
                         f"Mit freundlichen Grüßen\n{db.setting('verwaltung_name')}",
                         [(f"Sonderumlage-{e['nr']}.pdf", pdf.umlage_anforderungen(g, u, [(e, p, anteil)], konto, text), "application/pdf")])
             mails += 1

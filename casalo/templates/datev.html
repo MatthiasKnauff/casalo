@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block titel %}DATEV {{ jahr }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}?tab=finanzen">WEG {{ g.name }}</a></p>
+  <h1>DATEV-Export {{ jahr }}</h1><p class="unter">Buchungsstapel (EXTF) für den Steuerberater · {{ anzahl }} Buchungen</p></div>
+  <div class="zeile"><a class="knopf zweit" href="?jahr={{ jahr - 1 }}">← {{ jahr - 1 }}</a><a class="knopf zweit" href="?jahr={{ jahr + 1 }}">{{ jahr + 1 }} →</a>
+    <a class="knopf" href="?jahr={{ jahr }}&laden=1">Buchungsstapel herunterladen</a></div></div>
+{% for h in hinweise %}<p class="hinweis warnung">{{ h }}</p>{% endfor %}
+<div class="raster">
+<section class="karte eng"><h2 style="padding:14px 14px 0">Sachkonten der Kostenarten</h2><div class="scroll"><table class="tab" data-tab="datev-kostenarten">
+  <thead><tr><th>Kostenart</th><th>DATEV-Konto</th></tr></thead><tbody>
+  {% for k in kostenarten %}<tr><td>{{ k.name }}</td>{{ zelle('kostenart', k, 'datev_konto') }}</tr>{% endfor %}
+</tbody></table></div></section>
+<section class="karte eng"><h2 style="padding:14px 14px 0">Bankkonten</h2><div class="scroll"><table class="tab" data-tab="datev-konten">
+  <thead><tr><th>Konto</th><th>DATEV-Konto</th></tr></thead><tbody>
+  {% for k in konten %}<tr><td>{{ 'Rücklage' if k.art == 'ruecklage' else 'Hausgeld' }} · {{ k.bank }}</td>{{ zelle('konto', k, 'datev_konto') }}</tr>{% endfor %}
+</tbody></table></div>
+<p class="hinweis" style="padding:0 14px">Leer: {{ standard_bank.hausgeld }} (Hausgeld) bzw. {{ standard_bank.ruecklage }} (Rücklage). Allgemeine Konten unter Einstellungen → DATEV.</p></section>
+</div>
+<p class="hinweis">Jede Buchung geht vom Bankkonto aus (Soll = Eingang, Haben = Ausgang); Belegfeld 1 ist die Belegnummer, Belegfeld 2 die Einheit.
+Vor dem ersten Import mit dem Steuerberater einen Probelauf machen.</p>
+{% endblock %}

@@ -9,7 +9,7 @@ from . import db, rechnen
 
 bp = Blueprint("web", __name__)
 
-OFFEN = ("/anmelden", "/health", "/static/")
+OFFEN = ("/anmelden", "/health", "/static/", "/portal")     # /portal: eigene Anmeldung und CSRF-Prüfung (v_portal)
 
 
 def aktueller_benutzer():

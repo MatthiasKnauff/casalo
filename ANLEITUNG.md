@@ -75,6 +75,34 @@ in `casalo/static/js/` (Kern, Rückgängig, Tabellen, Bereich rechts).
   Rechnung („davon Lohn“), gilt dieser. Verteilt wird wie in der Abrechnung; Maßnahmen aus der Rücklage nach MEA. Die
   Bescheinigung geht beim Versand der Jahresabrechnung mit, wenn begünstigte Kosten angefallen sind.
 
+## Handwerker, Aufträge, Wartung, Belege
+
+- **Dienstleister** (links, für alle Gemeinschaften): Firma, Gewerk, Telefon, Notdienst, E-Mail, IBAN.
+- **Aufträge** (Gemeinschaft → Aufträge, oder aus einem Vorgang: Detailkarte → „Auftrag erteilen“): Nummer A-Jahr-lfd.,
+  Dienstleister, Kostenart, Einheit, Angebot. „Beauftragen per E-Mail“ schickt das Auftragsschreiben (PDF) mit
+  Rechnungsanschrift der WEG und der Bitte, Arbeitskosten für § 35a getrennt auszuweisen. „Erledigt“ schließt auch den Vorgang.
+  Rechnungsbetrag und -nummer eintragen: Der Bankabgleich ordnet die Zahlung dann dem Auftrag zu (Betrag, Rechnungsnummer,
+  IBAN) und bucht sie auf die Kostenart. Ohne Bank: „Rechnung buchen“.
+- **Wartung** (Gemeinschaft → Wartung): Vorlagen für Aufzug, Heizung, Rauchwarnmelder, Legionellen, Rückstau u. a. mit
+  üblichem Intervall und Grundlage. Ist ein Wartungsauftrag erledigt, rückt der nächste Termin weiter. Fällige Termine und
+  Kündigungsfristen von Verträgen stehen auf der Übersicht unter „Fristen“.
+- **Belege** (Gemeinschaft → Belege): PDF, PNG oder JPEG zu Buchungen und Aufträgen, fortlaufend nummeriert (B-Jahr-lfd.).
+  Die Seite zeigt auch Kosten ohne Beleg. Dateien liegen im Datenordner unter `belege/` – mitsichern.
+
+## Eigentümerportal
+
+Adresse: `https://<Ihre Domain>/portal`. Eigentümer melden sich mit ihrer hinterlegten E-Mail-Adresse an und bekommen einen
+Link (30 Minuten gültig, einmal verwendbar) – kein Passwort. Sie sehen nur ihre eigenen Einheiten: Hausgeld, offene Posten,
+beschlossene Wirtschaftspläne, versandte Einladungen und Niederschriften, angeforderte Sonderumlagen, die Beschluss-Sammlung
+und – nach Versand oder „Im Portal zeigen“ – Einzelabrechnung und § 35a-Bescheinigung. Nachrichten und Schadensmeldungen
+werden Vorgänge. Belege der Gemeinschaft nur, wenn unter Einstellungen → Eigentümerportal freigeschaltet. Braucht den E-Mail-Versand.
+
+## DATEV
+
+Einstellungen → DATEV: Berater- und Mandantennummer, Sammelkonten. Sachkonten je Kostenart und Bankkonto unter
+Gemeinschaft → Konten, Beschlüsse … → Wirtschaftsplan & Abrechnung → „DATEV“. Export als Buchungsstapel (EXTF 700,
+Windows-1252). Vor dem ersten Import mit dem Steuerberater einen Probelauf machen.
+
 ## 3. Bank
 
 - **FinTS** (Standard): BLZ, FinTS-Adresse der Bank, Anmeldename und PIN beim Konto eintragen. Beim ersten Abruf
@@ -122,6 +150,6 @@ der Casalo-Schnittstelle liest er selbst aus dem gemeinsamen Volume. Updates kom
 
 ## 5. Daten und Sicherung
 
-Alles liegt im Volume (Datenordner `/data`): `casalo.db` (SQLite) und `secret.key`
+Alles liegt im Volume (Datenordner `/data`): `casalo.db` (SQLite), der Ordner `belege/` und `secret.key`
 (verschlüsselt Bank-PINs und SMTP-Passwort). **Beide zusammen sichern** – ohne `secret.key` sind die
 gespeicherten Zugänge nicht mehr lesbar.

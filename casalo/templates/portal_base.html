@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="de" data-theme="auto" data-dichte="normal">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>{% block titel %}Eigentümerportal{% endblock %} · {{ verwaltung }}</title>
+<link rel="stylesheet" href="/static/style.css?v={{ VERSION }}">
+</head>
+<body class="portal">
+<header class="kopfleiste"><a class="marke" href="/portal"><b>{{ verwaltung }}</b></a><span class="portal-unter">Eigentümerportal</span>
+  {% block kopf %}{% endblock %}</header>
+<main class="portal-inhalt">
+{% with m = get_flashed_messages(with_categories=true) %}{% for art, text in m %}<div class="meldung {{ art }}">{{ text }}</div>{% endfor %}{% endwith %}
+{% block inhalt %}{% endblock %}
+</main>
+</body>
+</html>

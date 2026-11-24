@@ -30,7 +30,8 @@
           <option value="">– wählen –</option>
           <optgroup label="Hausgeld der Einheit">{% for e in aw.einheiten %}<option value="e:{{ e.id }}" {{ 'selected' if u.v and u.v.einheit_id == e.id and u.v.art == 'hausgeld' }}>{{ e.nr }} {{ e.lage }}</option>{% endfor %}</optgroup>
           {% if aw.umlagen %}<optgroup label="Sonderumlage">{% for x in aw.umlagen %}<option value="{{ x.wert }}" {{ 'selected' if u.v and u.v.sonderumlage_id and x.wert == 'u:%s:%s'|format(u.v.sonderumlage_id, u.v.einheit_id) }}>{{ x.text }}</option>{% endfor %}</optgroup>{% endif %}
-          <optgroup label="Kostenart">{% for k in aw.kostenarten %}<option value="k:{{ k.id }}" {{ 'selected' if u.v and u.v.kostenart_id == k.id }}>{{ k.name }}</option>{% endfor %}</optgroup>
+          {% if aw.rechnungen %}<optgroup label="Rechnung eines Auftrags">{% for a in aw.rechnungen %}<option value="a:{{ a.id }}" {{ 'selected' if u.v and u.v.auftrag_id == a.id }}>{{ a.nr }} {{ a.firma or '' }} ({{ a.rechnung_cent|eur }})</option>{% endfor %}</optgroup>{% endif %}
+          <optgroup label="Kostenart">{% for k in aw.kostenarten %}<option value="k:{{ k.id }}" {{ 'selected' if u.v and u.v.kostenart_id == k.id and not u.v.auftrag_id }}>{{ k.name }}</option>{% endfor %}</optgroup>
           <option value="s">Sonstiges / Umbuchung</option>
         </select>
       </form>

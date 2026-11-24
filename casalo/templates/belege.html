@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titel %}Belege {{ jahr }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}">WEG {{ g.name }}</a></p>
+  <h1>Belege {{ jahr }}</h1><p class="unter">Rechnungen und Nachweise zu den Buchungen · fortlaufend nummeriert</p></div>
+  <div class="zeile"><a class="knopf zweit" href="?jahr={{ jahr - 1 }}">← {{ jahr - 1 }}</a><a class="knopf zweit" href="?jahr={{ jahr + 1 }}">{{ jahr + 1 }} →</a></div></div>
+{% if ohne %}
+<section class="karte eng"><h2 style="padding:14px 14px 0">Kosten ohne Beleg <span class="chip warnung">{{ ohne|length }}</span></h2><div class="scroll"><table class="tab" data-tab="ohne-beleg">
+  <thead><tr><th>Datum</th><th>Text</th><th>Kostenart</th><th class="zahl">Betrag</th><th data-nosort data-name="Beleg">Beleg</th></tr></thead><tbody>
+  {% for b in ohne %}<tr><td data-sort="{{ b.datum }}">{{ b.datum|datum }}</td><td>{{ b.text }}</td><td>{{ b.ka_name or '' }}</td><td class="zahl">{{ b.betrag_cent|eur }}</td>
+    <td><form method="post" action="/beleg/hochladen" enctype="multipart/form-data" class="zeile"><input type="hidden" name="buchung_id" value="{{ b.id }}">
+      <input type="file" name="datei" accept="application/pdf,image/png,image/jpeg" required style="max-width:230px;min-height:32px;padding:3px"><button class="klein zweit">Ablegen</button></form></td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endif %}
+<section class="karte eng"><div class="scroll"><table class="tab" data-tab="belege">
+  <thead><tr><th>Beleg-Nr.</th><th>Datei</th><th>Buchung</th><th class="zahl">Betrag</th><th>Auftrag</th><th>abgelegt</th><th data-nosort data-name="Aktionen"></th></tr></thead><tbody>
+  {% for b in belege %}<tr><td><b>{{ b.nr }}</b></td><td><a href="/beleg/{{ b.id }}" target="_blank">{{ b.name }}</a></td>
+    <td>{% if b.datum %}{{ b.datum|datum }} · {{ b.b_text }}{% else %}<span class="muted">–</span>{% endif %}</td><td class="zahl">{{ b.betrag_cent|eur if b.betrag_cent is not none }}</td>
+    <td>{% if b.a_nr %}<a href="/auftrag/{{ b.auftrag_id }}">{{ b.a_nr }}</a>{% endif %}</td><td class="muted klein">{{ b.hochgeladen[:10]|datum }}</td>
+    <td><form method="post" action="/beleg/{{ b.id }}/loeschen" data-frage="Beleg {{ b.nr }} löschen?" data-ok="Löschen"><button class="klein gefahr" aria-label="Löschen">✕</button></form></td></tr>
+  {% else %}<tr><td colspan="7" class="leer">Noch keine Belege in {{ jahr }}.</td></tr>{% endfor %}
+</tbody></table></div></section>
+<p class="hinweis">Jeder Eigentümer darf die Belege einsehen (§ 18 Abs. 4 WEG). Aufbewahrung: Belege der Gemeinschaft mindestens 10 Jahre.</p>
+{% endblock %}

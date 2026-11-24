@@ -1,0 +1,7 @@
+{% with art='Dienstleister', titel=d.firma, unter=d.gewerk, seite='/dienstleister#d' ~ d.id %}{% include "karten/_kopf.html" %}{% endwith %}
+<table class="kv-tab">
+  {% for feld, name in [('firma','Firma'),('gewerk','Gewerk'),('ansprechpartner','Ansprechpartner'),('telefon','Telefon'),('notdienst','Notdienst'),('email','E-Mail'),('strasse','Straße'),('plz','PLZ'),('ort','Ort'),('iban','IBAN'),('stichworte','Stichworte'),('notiz','Notiz')] %}
+  <tr><th>{{ name }}</th>{{ zelle('dienstleister', d, feld) }}</tr>{% endfor %}
+</table>
+{% if auftraege %}<h3>Aufträge</h3><ul class="karte-liste">{% for a in auftraege %}<li><a href="/auftrag/{{ a.id }}">{{ a.nr }}</a> {{ a.titel }} <span class="muted klein">· {{ a.g_name }} · {{ a.status }}</span></li>{% endfor %}</ul>{% endif %}
+{% if wartungen %}<h3>Wartungen</h3><ul class="karte-liste">{% for w in wartungen %}<li>{{ w.titel }} <span class="muted klein">· {{ w.g_name }}{% if w.naechste %} · nächste {{ w.naechste|datum }}{% endif %}</span></li>{% endfor %}</ul>{% endif %}

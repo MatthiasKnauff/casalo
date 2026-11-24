@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titel %}Dienstleister{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div><h1>Handwerker &amp; Dienstleister</h1><p class="unter">für alle Gemeinschaften · Aufträge, Wartungen, Notdienst</p></div>
+  <div class="zeile"><a class="knopf {{ '' if not gewerk else 'zweit' }} klein" href="/dienstleister">alle</a>
+  {% for x in gewerke %}<a class="knopf {{ '' if gewerk == x else 'zweit' }} klein" href="?gewerk={{ x|urlencode }}">{{ x }}</a>{% endfor %}</div></div>
+<section class="karte eng"><div class="scroll"><table class="tab" data-tab="dienstleister">
+  <thead><tr><th>Firma</th><th>Gewerk</th><th>Ansprechpartner</th><th>Telefon</th><th>Notdienst</th><th>E-Mail</th><th class="zahl">laufende Aufträge</th><th data-nosort data-name="Aktionen"></th></tr></thead><tbody>
+  {% for d in liste %}
+  <tr id="d{{ d.id }}" data-karte="/karte/dienstleister/{{ d.id }}">{{ zelle('dienstleister', d, 'firma') }}{{ zelle('dienstleister', d, 'gewerk') }}{{ zelle('dienstleister', d, 'ansprechpartner') }}
+    {{ zelle('dienstleister', d, 'telefon') }}{{ zelle('dienstleister', d, 'notdienst') }}{{ zelle('dienstleister', d, 'email') }}
+    <td class="zahl">{{ d.offen or '' }}</td>
+    <td><form method="post" action="/dienstleister/{{ d.id }}/loeschen" data-frage="„{{ d.firma }}“ entfernen?" data-ok="Entfernen"><button class="klein gefahr" aria-label="Entfernen">✕</button></form></td></tr>
+  {% else %}<tr><td colspan="8" class="leer">Noch keine Dienstleister.</td></tr>{% endfor %}
+</tbody></table></div></section>
+<section class="karte"><h2>Neuer Dienstleister</h2><form method="post"><div class="felder">
+  <div style="grid-column: span 2"><label>Firma</label><input name="firma" required></div>
+  <div><label>Gewerk</label><select name="gewerk">{% for x in gewerke %}<option {{ 'selected' if x == gewerk }}>{{ x }}</option>{% endfor %}</select></div>
+  <div><label>Ansprechpartner</label><input name="ansprechpartner"></div>
+  <div><label>Telefon</label><input name="telefon"></div>
+  <div><label>Notdienst</label><input name="notdienst" placeholder="außerhalb der Geschäftszeit"></div>
+  <div><label>E-Mail</label><input name="email" type="email"></div>
+  <div><label>Ort</label><input name="ort"></div>
+</div><p class="hinweis">Anschrift, IBAN und Stichworte für den Bankabgleich rechts in der Detailkarte ergänzen.</p><p><button>Anlegen</button></p></form></section>
+{% endblock %}

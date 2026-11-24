@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block titel %}Auftrag {{ a.nr }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}/auftraege">WEG {{ g.name }} · Aufträge</a></p>
+  <h1>{{ a.nr }} · {{ a.titel }}</h1>
+  <p class="unter"><span class="chip {{ {'entwurf':'info','beauftragt':'warnung','erledigt':'ok','abgerechnet':'ok','storniert':''}[a.status] }}">{{ stati[a.status] }}</span>
+    angelegt {{ a.angelegt|datum }}{% if a.beauftragt_am %} · beauftragt {{ a.beauftragt_am|datum }}{% endif %}{% if a.erledigt_am %} · erledigt {{ a.erledigt_am|datum }}{% endif %}</p></div>
+  <div class="zeile">
+    <a class="knopf zweit" href="/auftrag/{{ a.id }}.pdf" target="_blank">Auftrag (PDF)</a>
+    {% if a.status == 'entwurf' %}
+      <form method="post" action="/auftrag/{{ a.id }}/status"><input type="hidden" name="status" value="beauftragt"><button class="zweit">nur vermerken</button></form>
+      <form method="post" action="/auftrag/{{ a.id }}/status"><input type="hidden" name="status" value="beauftragt"><input type="hidden" name="senden" value="1"><button {{ 'disabled title="Dienstleister ohne E-Mail"' if not d or not d.email }}>Beauftragen per E-Mail</button></form>
+    {% elif a.status == 'beauftragt' %}
+      <form method="post" action="/auftrag/{{ a.id }}/status"><input type="hidden" name="status" value="erledigt"><button>Erledigt</button></form>
+    {% endif %}
+    {% if a.status in ('entwurf','beauftragt') %}<form method="post" action="/auftrag/{{ a.id }}/status" data-frage="Auftrag stornieren?" data-ok="Stornieren"><input type="hidden" name="status" value="storniert"><button class="gefahr">Stornieren</button></form>{% endif %}
+  </div>
+</div>
+<div class="raster">
+<section class="karte"><h2>Auftrag</h2>
+  <table class="kv-tab">
+    <tr><th>Leistung</th>{{ zelle('auftrag', a, 'titel') }}</tr>
+    <tr><th>Beschreibung</th>{{ zelle('auftrag', a, 'text') }}</tr>
+    <tr><th>Termin</th>{{ zelle('auftrag', a, 'termin') }}</tr>
+    <tr><th>Angebot</th>{{ zelle('auftrag', a, 'angebot_cent') }}</tr>
+    {% if v %}<tr><th>Vorgang</th><td><a href="#" hx-get="/karte/vorgang/{{ v.id }}" hx-target="#rechts-inhalt">{{ v.titel }}</a> <span class="muted klein">{{ 'KI-Telefon' if v.quelle == 'telefon' else 'Portal' if v.quelle == 'portal' else '' }}</span></td></tr>{% endif %}
+    {% if w %}<tr><th>Wartung</th><td><a href="/g/{{ g.id }}/wartung">{{ w.titel }}</a></td></tr>{% endif %}
+  </table>
+  <form method="post" action="/auftrag/{{ a.id }}/zuordnen"><div class="felder">
+    <div><label>Dienstleister</label><select name="dienstleister_id"><option value="">–</option>{% for x in dienstleister %}<option value="{{ x.id }}" {{ 'selected' if x.id == a.dienstleister_id }}>{{ x.gewerk }} · {{ x.firma }}</option>{% endfor %}</select></div>
+    <div><label>Kostenart</label><select name="kostenart_id"><option value="">–</option>{% for k in kostenarten %}<option value="{{ k.id }}" {{ 'selected' if k.id == a.kostenart_id }}>{{ k.name }}</option>{% endfor %}</select></div>
+    <div><label>Einheit</label><select name="einheit_id"><option value="">Gemeinschaftseigentum</option>{% for x in einheiten %}<option value="{{ x.id }}" {{ 'selected' if x.id == a.einheit_id }}>{{ x.nr }} {{ x.lage }}</option>{% endfor %}</select></div>
+  </div><p><button class="zweit klein">Zuordnung speichern</button> <a class="klein" href="/dienstleister">Dienstleister verwalten</a></p></form>
+  {% if d %}<p class="hinweis"><b>{{ d.firma }}</b>{% if d.telefon %} · {{ d.telefon }}{% endif %}{% if d.notdienst %} · Notdienst {{ d.notdienst }}{% endif %}{% if d.email %} · {{ d.email }}{% endif %}</p>{% endif %}
+</section>
+<section class="karte"><h2>Rechnung</h2>
+  <table class="kv-tab">
+    <tr><th>Rechnungs-Nr.</th>{{ zelle('auftrag', a, 'rechnung_nr') }}</tr>
+    <tr><th>Betrag (brutto)</th>{{ zelle('auftrag', a, 'rechnung_cent') }}</tr>
+    <tr><th>Bezahlt</th><td>{% if b %}{{ b.datum|datum }} · {{ b.betrag_cent|eur }}{% else %}<span class="muted">noch nicht</span>{% endif %}</td></tr>
+  </table>
+  {% if not b and a.status in ('beauftragt','erledigt') %}
+  <p class="hinweis">Kommt die Zahlung über die Bank, ordnet der Abgleich sie dieser Rechnung zu (Betrag, Rechnungsnummer, IBAN). Sonst hier buchen:</p>
+  <form method="post" action="/auftrag/{{ a.id }}/bezahlt"><div class="felder">
+    <div><label>Bezahlt am</label><input type="date" name="datum" value="{{ heute }}"></div>
+    <div><label>Konto</label><select name="konto_id"><option value="">–</option>{% for k in konten %}<option value="{{ k.id }}">{{ 'Rücklage' if k.art == 'ruecklage' else 'Hausgeld' }} · {{ k.bank }}</option>{% endfor %}</select></div>
+  </div>{% if a.einheit_id %}<label class="haken"><input type="checkbox" name="direkt" value="1"> direkt der Einheit belasten (Sondereigentum)</label>{% endif %}
+  <p><button class="zweit">Rechnung buchen</button></p></form>{% endif %}
+  <h3>Belege</h3>
+  <ul class="karte-liste">{% for x in belege %}<li><a href="/beleg/{{ x.id }}" target="_blank">{{ x.nr }} · {{ x.name }}</a> <span class="muted klein">{{ (x.groesse / 1024)|round|int }} KB</span></li>{% else %}<li class="muted">Noch kein Beleg (Angebot, Rechnung, Fotos).</li>{% endfor %}</ul>
+  <form method="post" action="/beleg/hochladen" enctype="multipart/form-data" class="zeile"><input type="hidden" name="auftrag_id" value="{{ a.id }}">
+    <input type="file" name="datei" accept="application/pdf,image/png,image/jpeg" multiple required style="max-width:320px"><button class="zweit klein">Hochladen</button></form>
+</section>
+</div>
+{% endblock %}

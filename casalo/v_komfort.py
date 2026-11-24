@@ -19,12 +19,17 @@ ZAHLWEISE = [("ueberweisung", "Überweisung"), ("lastschrift", "Lastschrift")]
 STATUS = [("offen", "offen"), ("erledigt", "erledigt")]
 KONTOART = [("hausgeld", "Hausgeld"), ("ruecklage", "Rücklage")]
 ZUGANG = [("fints", "FinTS"), ("finapi", "finAPI"), ("datei", "Datei-Import")]
+GEWERKE = ["Hausmeister", "Reinigung", "Garten", "Winterdienst", "Sanitär", "Heizung", "Elektro", "Dach", "Maler",
+           "Schlüsseldienst", "Aufzug", "Rohrreinigung", "Schornsteinfeger", "Messdienst", "Sonstiges"]
+AUFTRAG_STATUS = [("entwurf", "Entwurf"), ("beauftragt", "beauftragt"), ("erledigt", "erledigt"),
+                  ("abgerechnet", "abgerechnet"), ("storniert", "storniert")]
 STEUER35A = [("", "–"), ("dienstleistung", "Haushaltsnahe Dienstleistung"), ("handwerker", "Handwerkerleistung"),
              ("minijob", "Minijob (geringfügig)")]
 
 
-def F(name, typ="text", pflicht=False, optionen=None, einheit=""):
-    return {"name": name, "typ": typ, "pflicht": pflicht, "optionen": optionen or [], "einheit": einheit}
+def F(name, typ="text", pflicht=False, optionen=None, einheit="", leer=None):
+    """leer: gespeicherter Wert, wenn das Feld geleert wird (nur Beträge; sonst NULL)."""
+    return {"name": name, "typ": typ, "pflicht": pflicht, "optionen": optionen or [], "einheit": einheit, "leer": leer}
 
 
 FELDER = {
@@ -40,15 +45,28 @@ FELDER = {
     "kostenart": {"_tabelle": "kostenart", "_titel": lambda r: r["name"],
                   "name": F("Kostenart", pflicht=True), "schluessel": F("Schlüssel", "wahl", optionen=list(rechnen.SCHLUESSEL.items())),
                   "stichworte": F("Stichworte"), "reihenfolge": F("#", "ganz"),
-                  "steuer35a": F("§ 35a", "wahl", optionen=STEUER35A), "lohnanteil": F("Lohnanteil", "ganz", einheit="%")},
+                  "datev_konto": F("DATEV-Konto"), "steuer35a": F("§ 35a", "wahl", optionen=STEUER35A), "lohnanteil": F("Lohnanteil", "ganz", einheit="%")},
     "konto": {"_tabelle": "konto", "_titel": lambda r: f"{r['bank']} {r['iban']}",
               "art": F("Art", "wahl", optionen=KONTOART), "bank": F("Bank"), "iban": F("IBAN", "iban"), "bic": F("BIC"),
-              "zugang": F("Abruf", "wahl", optionen=ZUGANG)},
+              "zugang": F("Abruf", "wahl", optionen=ZUGANG), "datev_konto": F("DATEV-Konto")},
     "vorgang": {"_tabelle": "vorgang", "_titel": lambda r: r["titel"],
                 "titel": F("Titel", pflicht=True), "text": F("Beschreibung", "lang"), "status": F("Status", "wahl", optionen=STATUS)},
     "gemeinschaft": {"_tabelle": "gemeinschaft", "_titel": lambda r: r["name"],
                      "nr": F("Nr."), "name": F("Name", pflicht=True), "strasse": F("Straße"), "plz": F("PLZ"), "ort": F("Ort"),
                      "glaeubiger_id": F("Gläubiger-ID")},
+    "dienstleister": {"_tabelle": "dienstleister", "_titel": lambda r: r["firma"],
+                      "firma": F("Firma", pflicht=True), "gewerk": F("Gewerk", "wahl", optionen=[(g, g) for g in GEWERKE]),
+                      "ansprechpartner": F("Ansprechpartner"), "telefon": F("Telefon"), "notdienst": F("Notdienst"),
+                      "email": F("E-Mail", "email"), "strasse": F("Straße"), "plz": F("PLZ"), "ort": F("Ort"),
+                      "iban": F("IBAN", "iban"), "stichworte": F("Stichworte"), "notiz": F("Notiz", "lang")},
+    "auftrag": {"_tabelle": "auftrag", "_titel": lambda r: r["titel"],
+                "titel": F("Leistung", pflicht=True), "text": F("Beschreibung", "lang"), "termin": F("Termin", "datum"),
+                "angebot_cent": F("Angebot", "betrag"), "rechnung_nr": F("Rechnungs-Nr."), "rechnung_cent": F("Rechnung", "betrag")},
+    "wartung": {"_tabelle": "wartung", "_titel": lambda r: r["titel"],
+                "titel": F("Wartung", pflicht=True), "intervall_monate": F("Intervall", "ganz", einheit="Mon."),
+                "letzte": F("Zuletzt", "datum"), "naechste": F("Nächste", "datum"), "pflicht": F("Grundlage"),
+                "vertrag_bis": F("Vertrag bis", "datum"), "kuendigung_monate": F("Kündigungsfrist", "ganz", einheit="Mon."),
+                "kosten_jahr_cent": F("Kosten/Jahr", "betrag", leer=0), "notiz": F("Notiz", "lang")},
     "buchung": {"_tabelle": "buchung", "_titel": lambda r: r["text"] or "Buchung", "text": F("Text"),
                 "lohn_cent": F("Arbeitskosten", "betrag")},
 }
@@ -84,7 +102,7 @@ def anzeige(fd, wert):
     if t == "iban":
         return bank.iban_format(wert)
     if t == "betrag":
-        return rechnen.fmt(wert) + " €"
+        return rechnen.fmt(wert)
     if t == "ganz" and fd["einheit"]:
         return f"{wert} {fd['einheit']}"
     return str(wert)
@@ -110,12 +128,14 @@ def pruefen(art, feld, fd, roh, zeile):
         roh = roh.replace(fd["einheit"], "").strip() if fd["einheit"] else roh
         if not roh.lstrip("-").isdigit():
             raise ValueError(f"{fd['name']}: bitte eine ganze Zahl eingeben.")
+        if fd["einheit"] == "Mon." and int(roh) < 0:
+            raise ValueError(f"{fd['name']} kann nicht negativ sein.")
         if fd["einheit"] == "%" and not 0 <= int(roh) <= 100:
             raise ValueError(f"{fd['name']}: zwischen 0 und 100 %.")
         return int(roh)
     if t == "betrag":
         if not roh:
-            return None
+            return fd["leer"]
         try:
             w = rechnen.parse_betrag(roh.replace("€", ""))
         except ValueError:
@@ -256,15 +276,30 @@ def karte(art, oid):
         k = _zeile("kostenart", oid)
         return render_template("karten/kostenart.html", k=k, ist=daten.kosten(k["gemeinschaft_id"], heute.year).get(oid, 0),
                                vorjahr=daten.kosten(k["gemeinschaft_id"], heute.year - 1).get(oid, 0))
+    if art in KARTEN:
+        return KARTEN[art](oid)
     abort(404)
 
 
+KARTEN = {}          # weitere Detailkarten, von anderen Modulen eingetragen: art → Funktion(oid)
+
+
 # ------------------------------------------------------------------ Gemeinschaft oben wählen
+UNTERSEITEN = {"auftrag": "auftrag", "sonderumlage": "sonderumlage", "versammlung": "versammlung"}   # /<art>/<id> gehört zu einer WEG
+
+
 @bp.before_app_request
 def gemeinschaft_merken():
+    """Die zuletzt geöffnete Gemeinschaft bleibt oben gewählt – auch auf Seiten einzelner Aufträge, Umlagen, Versammlungen."""
     m = re.match(r"^/(?:g|assistent)/(\d+)", request.path)
     if m:
         session["gid"] = int(m.group(1))
+        return
+    m = re.match(r"^/(auftrag|sonderumlage|versammlung)/(\d+)", request.path)
+    if m and session.get("uid"):
+        r = db.q(f"SELECT gemeinschaft_id FROM {UNTERSEITEN[m.group(1)]} WHERE id = ?", (int(m.group(2)),), one=True)
+        if r:
+            session["gid"] = r["gemeinschaft_id"]
 
 
 def aktuelle_gemeinschaft():

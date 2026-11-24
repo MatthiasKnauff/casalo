@@ -47,6 +47,9 @@
   <a class="nav sub {{ 'an' if p.startswith(gp ~ '/abrechnung') or p.startswith(gp ~ '/heizkosten') or p.startswith(gp ~ '/steuer35a') }}" href="{{ gp }}/abrechnung/{{ heute_jahr - 1 }}">Abrechnung</a>
   <a class="nav sub {{ 'an' if p.startswith(gp ~ '/sonderumlagen') or p.startswith('/sonderumlage/') }}" href="{{ gp }}/sonderumlagen">Sonderumlagen</a>
   <a class="nav sub {{ 'an' if p.startswith(gp ~ '/mahnwesen') }}" href="{{ gp }}/mahnwesen">Mahnwesen</a>
+  <a class="nav sub {{ 'an' if p.startswith(gp ~ '/auftraege') or p.startswith('/auftrag/') }}" href="{{ gp }}/auftraege">Aufträge</a>
+  <a class="nav sub {{ 'an' if p.startswith(gp ~ '/wartung') }}" href="{{ gp }}/wartung">Wartung</a>
+  <a class="nav sub {{ 'an' if p.startswith(gp ~ '/belege') }}" href="{{ gp }}/belege">Belege</a>
   <a class="nav sub {{ 'an' if p == gp and request.args.get('tab') in ('konten','kostenarten','beschluesse','vorgaenge','einstellungen','finanzen') }}" href="{{ gp }}?tab=konten">Konten, Beschlüsse …</a>
   {% if g_aktuell.assistent %}<a class="nav sub hinweis-nav" href="/assistent/{{ g_aktuell.id }}/{{ g_aktuell.assistent }}">Einrichtung fortsetzen</a>{% endif %}
   <div class="trenner"></div>
@@ -55,6 +58,7 @@
   <a class="nav {{ 'an' if p.startswith('/person') }}" href="/personen">Eigentümer</a>
   <a class="nav {{ 'an' if p.startswith('/versammlung') }}" href="/versammlungen">Versammlungen</a>
   <a class="nav {{ 'an' if p.startswith('/vorgaenge') }}" href="/vorgaenge">Vorgänge</a>
+  <a class="nav {{ 'an' if p.startswith('/dienstleister') }}" href="/dienstleister">Dienstleister</a>
   <a class="nav {{ 'an' if p.startswith('/telefon') or p.startswith('/anruf') }}" href="/telefon">KI-Telefon</a>
   <a class="nav {{ 'an' if p.startswith('/bank') }}" href="/bank">Bank &amp; Hausgeld</a>
   <div class="trenner"></div>

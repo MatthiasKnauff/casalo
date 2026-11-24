@@ -1,0 +1,21 @@
+{% extends "portal_base.html" %}
+{% block titel %}Anmelden{% endblock %}
+{% block inhalt %}
+<section class="karte portal-schmal">
+{% if aus %}
+  <h1>Eigentümerportal</h1><p>Das Portal ist derzeit nicht freigeschaltet. Bitte wenden Sie sich an die Verwaltung.</p>
+{% elif gesendet %}
+  <h1>Bitte E-Mails prüfen</h1>
+  <p>Wenn die Adresse bei uns als Eigentümer hinterlegt ist, ist ein Anmeldelink unterwegs. Er gilt 30 Minuten und nur einmal.</p>
+  <p class="hinweis">Keine E-Mail bekommen? Spam-Ordner prüfen oder die Verwaltung bitten, Ihre Adresse zu hinterlegen.</p>
+{% else %}
+  <h1>Eigentümerportal</h1>
+  {% if abgelaufen %}<div class="meldung fehler">Der Link ist abgelaufen oder wurde schon benutzt – bitte neu anfordern.</div>{% endif %}
+  <p>Abrechnungen, Wirtschaftsplan, Einladungen und Beschlüsse Ihrer Gemeinschaft – und ein direkter Draht zur Verwaltung.</p>
+  <form method="post" action="/portal/anmelden"><input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <label for="email">Ihre E-Mail-Adresse</label><input id="email" name="email" type="email" required autocomplete="email">
+    <p><button>Anmeldelink senden</button></p></form>
+  <p class="hinweis">Kein Passwort nötig: Sie bekommen einen Link per E-Mail.</p>
+{% endif %}
+</section>
+{% endblock %}

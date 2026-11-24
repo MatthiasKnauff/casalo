@@ -60,11 +60,12 @@ def _tabelle(daten, breiten, summenzeile=False, rechts_ab=1):
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#444444")),
         ("LINEBELOW", (0, 0), (-1, 0), 0.6, colors.HexColor("#999999")),
         ("LINEBELOW", (0, 1), (-1, -1), 0.25, colors.HexColor("#dddddd")),
-        ("ALIGN", (rechts_ab, 0), (-1, -1), "RIGHT"),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("TOPPADDING", (0, 0), (-1, -1), 3),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
     ]
+    if rechts_ab is not None:
+        st.append(("ALIGN", (rechts_ab, 0), (-1, -1), "RIGHT"))
     if summenzeile:
         st += [("FONT", (0, -1), (-1, -1), "Helvetica-Bold", 9.5),
                ("LINEABOVE", (0, -1), (-1, -1), 0.8, colors.HexColor("#444444"))]
@@ -394,3 +395,32 @@ def bescheinigungen_35a_pdf(g, jahr, liste):
             story.append(PageBreak())
         story += bescheinigung_35a(g, jahr, e, p, d)
     return _bauen(story or [Paragraph("Keine Empfänger.", S["text"])], f"Bescheinigungen 35a {jahr}")
+
+
+# ------------------------------------------------------------------ Auftrag an Dienstleister
+def auftrag(g, a, d, einheit, kontakt):
+    story = _anschrift({"firma": d["firma"], "strasse": d["strasse"], "plz": d["plz"], "ort": d["ort"]} if d else None)
+    story += _kopf(g, f"Auftrag {a['nr']}", f"vom {_datum(a['beauftragt_am'] or a['angelegt'])}")
+    zeilen = [["", ""],
+              ["Objekt", Paragraph(esc(f"{g['strasse']}, {g['plz']} {g['ort']}" + (f" – Einheit {einheit['nr']} {einheit['lage'] or ''}" if einheit else "")), S["text"])],
+              ["Leistung", Paragraph(esc(a["titel"]), S["text"])]]
+    if a["text"]:
+        zeilen.append(["Beschreibung", Paragraph(esc(a["text"]).replace("\n", "<br/>"), S["text"])])
+    if a["termin"]:
+        zeilen.append(["Termin", _datum(a["termin"])])
+    if kontakt:
+        zeilen.append(["Zugang / Kontakt", Paragraph(esc(kontakt), S["text"])])
+    if a["angebot_cent"]:
+        zeilen.append(["Auftragswert", f"{eur(a['angebot_cent'])} laut Angebot (brutto)"])
+    t = _tabelle(zeilen, [40 * mm, 130 * mm], rechts_ab=None)
+    story.append(t)
+    story.append(Spacer(1, 5 * mm))
+    story.append(Paragraph("Rechnungsanschrift", S["h2"]))
+    story.append(Paragraph(esc(f"Gemeinschaft der Wohnungseigentümer {g['name']}, {g['strasse']}, {g['plz']} {g['ort']}, "
+                               f"vertreten durch {db.setting('verwaltung_name')}"
+                               + (f", {db.setting('verwaltung_anschrift')}" if db.setting("verwaltung_anschrift") else "")), S["text"]))
+    story.append(Spacer(1, 3 * mm))
+    story.append(Paragraph(esc(f"Bitte geben Sie auf der Rechnung die Auftragsnummer {a['nr']} an und weisen Sie Arbeits-, Fahrt- und "
+                               "Maschinenkosten getrennt vom Material aus (Bescheinigung nach § 35a EStG für die Eigentümer). "
+                               "Mehrkosten über den Auftragswert hinaus bitte vorher mit uns abstimmen."), S["text"]))
+    return _bauen(story + _gruss(), f"Auftrag {a['nr']}")

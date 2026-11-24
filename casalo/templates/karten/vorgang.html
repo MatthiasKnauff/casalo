@@ -4,8 +4,9 @@
   <tr><th>Titel</th>{{ zelle('vorgang', v, 'titel') }}</tr>
   <tr><th>Beschreibung</th>{{ zelle('vorgang', v, 'text') }}</tr>
   <tr><th>Status</th>{{ zelle('vorgang', v, 'status') }}</tr>
-  <tr><th>Angelegt</th><td>{{ v.angelegt|datum }} · {{ 'KI-Telefon' if v.quelle == 'telefon' else 'Büro' }}</td></tr>
+  <tr><th>Angelegt</th><td>{{ v.angelegt|datum }} · {{ {'telefon': 'KI-Telefon', 'portal': 'Eigentümerportal'}.get(v.quelle, 'Büro') }}</td></tr>
   {% if v.rueckruf_bis %}<tr><th>Rückruf bis</th><td>{{ v.rueckruf_bis|datum }}{% if v.rueckruf_nummer %} · {{ v.rueckruf_nummer }}{% endif %}</td></tr>{% endif %}
   {% if p %}<tr><th>Anrufer</th><td><a href="#" hx-get="/karte/person/{{ p.id }}" hx-target="#rechts-inhalt">{{ p.firma or (p.vorname ~ ' ' ~ p.nachname) }}</a></td></tr>{% endif %}
 </table>
 {% if anruf %}<p><a href="#" hx-get="/karte/anruf/{{ anruf.id }}" hx-target="#rechts-inhalt">Gespräch dazu ansehen</a></p>{% endif %}
+{% if v.gemeinschaft_id %}<form method="post" action="/vorgang/{{ v.id }}/auftrag" style="margin-top:10px"><button class="klein {{ 'zweit' if v.auftrag_id else '' }}">{{ 'Auftrag ansehen' if v.auftrag_id else 'Auftrag erteilen' }}</button></form>{% endif %}

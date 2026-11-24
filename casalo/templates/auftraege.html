@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titel %}Aufträge{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}">WEG {{ g.name }}</a></p>
+  <h1>Aufträge</h1><p class="unter">an Handwerker und Dienstleister · aus Vorgängen und Wartungen</p></div>
+  <div class="zeile">{% for k, t in [('laufend','laufend')] + stati + [('alle','alle')] %}<a class="knopf {{ '' if status == k else 'zweit' }} klein" href="?status={{ k }}">{{ t }}</a>{% endfor %}</div></div>
+<section class="karte eng"><div class="scroll"><table class="tab" data-tab="auftraege">
+  <thead><tr><th>Nr.</th><th>Leistung</th><th>Dienstleister</th><th>Einheit</th><th>Termin</th><th class="zahl">Angebot</th><th class="zahl">Rechnung</th><th>Status</th></tr></thead><tbody>
+  {% for a in liste %}
+  <tr data-karte="/karte/auftrag/{{ a.id }}"><td><a href="/auftrag/{{ a.id }}"><b>{{ a.nr }}</b></a></td>{{ zelle('auftrag', a, 'titel') }}
+    <td>{{ a.firma or '–' }}</td><td>{{ a.e_nr or '' }}</td>{{ zelle('auftrag', a, 'termin') }}
+    {{ zelle('auftrag', a, 'angebot_cent') }}{{ zelle('auftrag', a, 'rechnung_cent') }}
+    <td><span class="chip {{ {'entwurf':'info','beauftragt':'warnung','erledigt':'ok','abgerechnet':'ok','storniert':''}[a.status] }}">{{ dict(stati)[a.status] }}</span></td></tr>
+  {% else %}<tr><td colspan="8" class="leer">Keine Aufträge.</td></tr>{% endfor %}
+</tbody></table></div></section>
+<section class="karte"><h2>Neuer Auftrag</h2><form method="post"><div class="felder">
+  <div style="grid-column: span 2"><label>Leistung</label><input name="titel" required placeholder="z. B. Rohrbruch Keller beheben"></div>
+  <div><label>Dienstleister</label><select name="dienstleister_id"><option value="">– später –</option>{% for d in dienstleister %}<option value="{{ d.id }}">{{ d.gewerk }} · {{ d.firma }}</option>{% endfor %}</select></div>
+  <div><label>Kostenart</label><select name="kostenart_id"><option value="">–</option>{% for k in kostenarten %}<option value="{{ k.id }}">{{ k.name }}</option>{% endfor %}</select></div>
+  <div><label>Einheit</label><select name="einheit_id"><option value="">Gemeinschaftseigentum</option>{% for e in einheiten %}<option value="{{ e.id }}">{{ e.nr }} {{ e.lage }}</option>{% endfor %}</select></div>
+  <div><label>Termin</label><input type="date" name="termin"></div>
+</div><label>Beschreibung</label><textarea name="text"></textarea><p><button>Anlegen</button></p></form>
+<p class="hinweis">Aufträge entstehen auch direkt aus einem Vorgang (Detailkarte rechts → „Auftrag erteilen“) oder aus einer Wartung.</p></section>
+{% endblock %}

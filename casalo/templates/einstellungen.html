@@ -23,6 +23,24 @@
   <label>Testnachricht an (optional)</label><input name="test_an" type="email">
   <p><button>Speichern</button></p>
 </form>
+<form method="post" class="karte"><input type="hidden" name="bereich" value="datev">
+  <h2>DATEV-Export</h2>
+  <div class="felder">
+    <div><label>Beraternummer</label><input name="datev_berater" value="{{ w.datev_berater }}" inputmode="numeric"></div>
+    <div><label>Mandantennummer</label><input name="datev_mandant" value="{{ w.datev_mandant }}" inputmode="numeric"></div>
+    <div><label>Konto Hausgeld-Eingänge</label><input name="datev_erloes_hausgeld" value="{{ w.datev_erloes_hausgeld }}" inputmode="numeric"></div>
+    <div><label>Konto Sonderumlagen</label><input name="datev_erloes_umlage" value="{{ w.datev_erloes_umlage }}" inputmode="numeric"></div>
+    <div><label>Konto Sonstiges/Umbuchung</label><input name="datev_konto_sonstig" value="{{ w.datev_konto_sonstig }}" inputmode="numeric"></div>
+    <div><label>Kosten ohne eigenes Konto</label><input name="datev_kosten_standard" value="{{ w.datev_kosten_standard }}" inputmode="numeric"></div>
+  </div>
+  <p class="hinweis">Sachkonten je Kostenart und Bankkonto trägt man bei der Gemeinschaft ein (Konten, Kostenarten). Kontenrahmen und Nummern mit dem Steuerberater abstimmen.</p>
+  <p><button class="zweit">Speichern</button></p></form>
+<form method="post" class="karte"><input type="hidden" name="bereich" value="portal">
+  <h2>Eigentümerportal</h2>
+  <label class="haken"><input type="checkbox" name="portal_aktiv" value="1" {{ 'checked' if w.portal_aktiv == '1' }}> Eigentümer können sich mit ihrer E-Mail-Adresse anmelden (Link per E-Mail, kein Passwort)</label>
+  <label class="haken"><input type="checkbox" name="portal_belege" value="1" {{ 'checked' if w.portal_belege == '1' }}> Belege der Gemeinschaft im Portal zeigen (Einsichtsrecht § 18 Abs. 4 WEG)</label>
+  <p class="hinweis">Adresse für Eigentümer: <b>{{ request.host_url }}portal</b></p>
+  <p><button class="zweit">Speichern</button></p></form>
 <section class="karte"><h2>Benutzer</h2>
   <table>{% for u in benutzerliste %}<tr><td>{{ u.name }}</td><td class="muted">{{ u.email }}</td><td>{{ 'Admin' if u.rolle == 'admin' else 'Mitarbeiter' }}</td>
     <td>{% if u.id != benutzer.id %}<form method="post" action="/benutzer/{{ u.id }}/loeschen" data-frage="Benutzer {{ u.name }} löschen?" data-ok="Löschen"><button class="klein gefahr" aria-label="Löschen">✕</button></form>{% endif %}</td></tr>{% endfor %}</table>

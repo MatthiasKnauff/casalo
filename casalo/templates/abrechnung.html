@@ -9,6 +9,7 @@
     <a class="knopf zweit" href="/g/{{ g.id }}/abrechnung/{{ jahr - 1 }}">← {{ jahr - 1 }}</a>
     <a class="knopf zweit" href="/g/{{ g.id }}/abrechnung/{{ jahr }}/gesamt.pdf" target="_blank">Gesamtabrechnung (PDF)</a>
     <a class="knopf zweit" href="/g/{{ g.id }}/steuer35a/{{ jahr }}">§ 35a-Bescheinigungen</a>
+    <form method="post" action="/g/{{ g.id }}/abrechnung/{{ jahr }}/portal">{% if im_portal %}<button class="zweit" title="seit {{ im_portal|datum }} im Eigentümerportal">Aus dem Portal nehmen</button>{% else %}<input type="hidden" name="zeigen" value="1"><button class="zweit" title="Einzelabrechnungen und § 35a im Eigentümerportal zeigen – geschieht beim Versand automatisch">Im Portal zeigen</button>{% endif %}</form>
     <form method="post" action="/g/{{ g.id }}/abrechnung/{{ jahr }}/versand"><button title="mit § 35a-Bescheinigung im Anhang, wenn begünstigte Kosten angefallen sind">An Eigentümer versenden</button></form>
   </div>
 </div>

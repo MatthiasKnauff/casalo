@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block titel %}Wartung{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}">WEG {{ g.name }}</a></p>
+  <h1>Wartung &amp; Prüfungen</h1><p class="unter">Wartungsverträge, wiederkehrende Prüfungen, Kündigungsfristen</p></div></div>
+{% for w in faellig.kuendigung %}<p class="hinweis warnung">Vertrag „{{ w.titel }}“{% if w.firma %} ({{ w.firma }}){% endif %} läuft bis {{ w.vertrag_bis|datum }} – kündigen bis {{ w.kuendigen_bis|datum }}, falls nicht verlängert werden soll.</p>{% endfor %}
+<section class="karte eng"><div class="scroll"><table class="tab" data-tab="wartung">
+  <thead><tr><th>Wartung / Prüfung</th><th>Dienstleister</th><th class="zahl">Intervall</th><th>Zuletzt</th><th>Nächste</th><th>Grundlage</th><th class="zahl">Kosten/Jahr</th><th>Vertrag bis</th><th data-nosort data-name="Aktionen"></th></tr></thead><tbody>
+  {% for w in liste %}
+  <tr data-karte="/karte/wartung/{{ w.id }}">{{ zelle('wartung', w, 'titel') }}<td>{{ w.firma or '–' }}</td>{{ zelle('wartung', w, 'intervall_monate') }}
+    {{ zelle('wartung', w, 'letzte') }}{{ zelle('wartung', w, 'naechste', 'rot' if w.naechste and w.naechste < heute else '') }}
+    {{ zelle('wartung', w, 'pflicht') }}{{ zelle('wartung', w, 'kosten_jahr_cent') }}{{ zelle('wartung', w, 'vertrag_bis') }}
+    <td class="zeile">{% if w.offener_auftrag %}<a class="klein" href="/auftrag/{{ w.offener_auftrag }}">Auftrag läuft</a>{% else %}
+      <form method="post" action="/wartung/{{ w.id }}/auftrag" class="inline"><button class="klein {{ '' if w.naechste and w.naechste <= bald else 'zweit' }}">Auftrag</button></form>{% endif %}
+      <form method="post" action="/wartung/{{ w.id }}/loeschen" class="inline" data-frage="„{{ w.titel }}“ löschen?" data-ok="Löschen"><button class="klein gefahr" aria-label="Löschen">✕</button></form></td></tr>
+  {% else %}<tr><td colspan="9" class="leer">Noch keine Wartungen.</td></tr>{% endfor %}
+</tbody></table></div></section>
+<section class="karte"><h2>Neue Wartung</h2><form method="post"><div class="felder">
+  <div style="grid-column: span 2"><label>Bezeichnung</label><input name="titel" list="vorlagen" required placeholder="aus der Liste wählen oder eigene"></div>
+  <datalist id="vorlagen">{% for t, v in vorlagen.items() %}<option value="{{ t }}">{{ v[0] }} Monate · {{ v[1] }}</option>{% endfor %}</datalist>
+  <div><label>Intervall (Monate)</label><input name="intervall_monate" inputmode="numeric" placeholder="aus Vorlage"></div>
+  <div><label>Zuletzt am</label><input type="date" name="letzte"></div>
+  <div><label>Nächste (sonst berechnet)</label><input type="date" name="naechste"></div>
+  <div><label>Dienstleister</label><select name="dienstleister_id"><option value="">–</option>{% for d in dienstleister %}<option value="{{ d.id }}">{{ d.gewerk }} · {{ d.firma }}</option>{% endfor %}</select></div>
+  <div><label>Kostenart</label><select name="kostenart_id"><option value="">–</option>{% for k in kostenarten %}<option value="{{ k.id }}">{{ k.name }}</option>{% endfor %}</select></div>
+  <div><label>Kosten je Jahr</label><input name="kosten" inputmode="decimal" placeholder="0,00"></div>
+  <div><label>Vertrag bis</label><input type="date" name="vertrag_bis"></div>
+</div><p class="hinweis">Ist ein Auftrag zur Wartung erledigt, rücken „Zuletzt“ und „Nächste“ von selbst weiter. Fällige Termine stehen auch auf der Übersicht.</p>
+<p><button>Anlegen</button></p></form></section>
+{% endblock %}
