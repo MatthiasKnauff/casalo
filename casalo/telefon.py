@@ -193,7 +193,12 @@ def notfall(gid, art, zeitpunkt=None):
         r = db.q("SELECT * FROM notfallregel WHERE gemeinschaft_id IS NULL AND notfallart = 'sonstiges'", one=True)
     if not r:
         return {"aktion": "aufnehmen", "text": "Der Notfall wird aufgenommen; die Verwaltung meldet sich zu Bürozeiten."}
-    return {"aktion": r["aktion"], "nummer": r["nummer"], "text": r["ansage"]}
+    nummer = r["nummer"]
+    if r["dienstleister_id"]:                 # Notdienst des Dienstleisters – bleibt aktuell, wenn sich die Nummer ändert
+        d = db.q("SELECT * FROM dienstleister WHERE id = ?", (r["dienstleister_id"],), one=True)
+        if d and (d["notdienst"] or d["telefon"]):
+            nummer = d["notdienst"] or d["telefon"]
+    return {"aktion": r["aktion"], "nummer": nummer, "text": r["ansage"]}
 
 
 def vorgang_anlegen(aid, titel, text, notfallart="", rueckruf=True):
@@ -309,10 +314,7 @@ def status_melden(daten):
 
 
 def status():
-    try:
-        s = json.loads(db.setting("tel_status", "") or "{}")
-    except ValueError:
-        s = {}
+    s = json.loads(db.setting("tel_status", "") or "{}")
     if s.get("zeit"):
         alter = (jetzt() - datetime.datetime.fromisoformat(s["zeit"])).total_seconds()
         s["aktuell"] = alter < 180                       # Container meldet sich jede Minute

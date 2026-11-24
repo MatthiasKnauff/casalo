@@ -26,6 +26,13 @@ def _eigentuemer_der_gemeinschaft(gid):
     return [dict(r) for r in rows]
 
 
+def beschluss_eintragen(gid, datum, art, text, ergebnis, versammlung_id=None):
+    """Neuer Eintrag in der Beschluss-Sammlung, fortlaufend nummeriert (§ 24 Abs. 7 WEG). → beschluss_id"""
+    lfd = (db.q("SELECT MAX(lfd) AS m FROM beschluss WHERE gemeinschaft_id = ?", (gid,), one=True)["m"] or 0) + 1
+    return db.ex("INSERT INTO beschluss (gemeinschaft_id, lfd, datum, versammlung_id, art, text, ergebnis) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                 (gid, lfd, datum, versammlung_id, art, text, ergebnis))
+
+
 @bp.get("/versammlungen")
 def versammlungen():
     rows = db.q("SELECT v.*, g.name AS g_name, (SELECT COUNT(*) FROM top t WHERE t.versammlung_id = v.id) AS n_tops "
@@ -216,11 +223,9 @@ def abschliessen(vid):
     for t in _tops(vid):
         if t["mehrheit"] == "keine" or not t["ergebnis"] or t["beschluss_id"]:
             continue
-        lfd = (db.q("SELECT MAX(lfd) AS m FROM beschluss WHERE gemeinschaft_id = ?", (gid,), one=True)["m"] or 0) + 1
         text = f"TOP {t['nr']} – {t['titel']}: {t['vorschlag']}".strip(": ")
         ergebnis = f"{t['ergebnis']} ({t['ja']:g} Ja / {t['nein']:g} Nein / {t['enthaltung'] or 0:g} Enthaltungen)"
-        bid = db.ex("INSERT INTO beschluss (gemeinschaft_id, lfd, datum, versammlung_id, art, text, ergebnis) "
-                    "VALUES (?, ?, ?, ?, 'versammlung', ?, ?)", (gid, lfd, datum, vid, text, ergebnis))
+        bid = beschluss_eintragen(gid, datum, "versammlung", text, ergebnis, vid)
         db.ex("UPDATE top SET beschluss_id = ? WHERE id = ?", (bid, t["id"]))
         n += 1
     db.ex("UPDATE versammlung SET status = 'durchgefuehrt' WHERE id = ?", (vid,))

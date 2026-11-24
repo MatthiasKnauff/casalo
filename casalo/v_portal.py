@@ -110,7 +110,9 @@ def portal():
         gid = e["gemeinschaft_id"]
         wp = daten.wirtschaftsplan(gid, heute.year)
         e["monat"] = wp["einheiten"][e["id"]]["monat"] if wp["wp"] else None
-        e["posten"] = forderungen.offene_posten(e["id"], heute)
+        t = db.q("SELECT von FROM eigentum WHERE einheit_id = ? AND person_id = ? AND bis IS NULL", (e["id"], p["id"]), one=True)
+        seit = t["von"] if t and t["von"] else None
+        e["posten"] = forderungen.offene_posten(e["id"], heute, seit)      # nur die eigene Zeit als Eigentümer
         e["offen"] = sum(x["betrag"] for x in e["posten"])
         konto = db.q("SELECT * FROM konto WHERE gemeinschaft_id = ? AND art = 'hausgeld' ORDER BY id LIMIT 1", (gid,), one=True)
         e["konto"] = dict(konto) if konto else None
@@ -118,6 +120,12 @@ def portal():
         e["beschluesse"] = db.q("SELECT * FROM beschluss WHERE gemeinschaft_id = ? ORDER BY lfd DESC LIMIT 15", (gid,))
         e["versammlungen"] = db.q("SELECT * FROM versammlung WHERE gemeinschaft_id = ? AND beginn >= ? AND einladung_versandt != '' "
                                   "ORDER BY beginn", (gid, heute.isoformat()))
+        e["umlaeufe"] = [dict(u) | {"meine": next((r["stimme"] for r in db.q("SELECT stimme FROM umlauf_stimme WHERE umlauf_id = ? AND person_id = ?",
+                                                                            (u["id"], p["id"]))), None)}
+                         for u in db.q("SELECT * FROM umlauf WHERE gemeinschaft_id = ? AND status = 'laeuft' ORDER BY frist", (gid,))]
+        e["dokumente"] += [{"titel": d["titel"], "datum": d["datum"] or d["hochgeladen"][:10], "url": f"/portal/datei/{d['id']}"}
+                           for d in db.q("SELECT * FROM dokument WHERE gemeinschaft_id = ? AND portal = 1", (gid,))]
+        e["dokumente"].sort(key=lambda d: d["datum"], reverse=True)
         e["vorgaenge"] = db.q("SELECT * FROM vorgang WHERE einheit_id = ? AND person_id = ? ORDER BY angelegt DESC LIMIT 5", (e["id"], p["id"]))
         e["belege"] = db.q("SELECT b.*, x.datum, x.betrag_cent, x.text AS b_text FROM beleg b LEFT JOIN buchung x ON x.id = b.buchung_id "
                            "WHERE b.gemeinschaft_id = ? AND (b.nr LIKE ? OR b.nr LIKE ?) ORDER BY b.nr DESC",
@@ -229,4 +237,41 @@ def portal_meldung():
     db.ex("INSERT INTO vorgang (gemeinschaft_id, einheit_id, person_id, titel, text, quelle, angelegt) VALUES (?, ?, ?, ?, ?, 'portal', ?)",
           (e["gemeinschaft_id"], e["id"], p["id"], titel, f("text")[:4000], datetime.datetime.now().isoformat(timespec="minutes")))
     flash("Danke – Ihre Nachricht ist bei der Verwaltung angekommen.", "ok")
+    return redirect("/portal")
+
+
+@bp.get("/portal/datei/<int:did>")
+def portal_datei(did):
+    p = _person()
+    if not p:
+        return redirect("/portal/anmelden")
+    d = db.q("SELECT * FROM dokument WHERE id = ? AND portal = 1", (did,), one=True)
+    if not d or d["gemeinschaft_id"] not in {e["gemeinschaft_id"] for e in _einheiten(p["id"])}:
+        abort(404)
+    from .v_betrieb import beleg_senden
+    return beleg_senden(d)
+
+
+@bp.post("/portal/umlauf/<int:uid>")
+def portal_umlauf(uid):
+    """Stimme im Portal; die Bestätigung per E-Mail hält die Erklärung in Textform fest (§ 126b BGB)."""
+    p = _person()
+    if not p:
+        return redirect("/portal/anmelden")
+    _pruefe_csrf()
+    from .v_umlauf import STIMMEN, stimme_abgeben
+    from .v_versammlung import _eigentuemer_der_gemeinschaft
+    u = db.q("SELECT * FROM umlauf WHERE id = ? AND status = 'laeuft'", (uid,), one=True)
+    if not u or p["id"] not in {x["id"] for x in _eigentuemer_der_gemeinschaft(u["gemeinschaft_id"])} or f("stimme") not in STIMMEN:
+        abort(404)
+    stimme_abgeben(uid, p["id"], f("stimme"), "portal")
+    g = daten.gemeinschaft(u["gemeinschaft_id"])
+    try:
+        mail.senden(p["email"], f"Ihre Stimme: Umlaufbeschluss – WEG {g['name']}",
+                    f"Guten Tag,\n\nhiermit bestätigen wir Ihre Erklärung vom {datetime.datetime.now():%d.%m.%Y, %H:%M} Uhr:\n\n"
+                    f"{daten.name(dict(p))} stimmt dem Beschlussantrag „{u['titel']}“ – {u['antrag']} – mit „{STIMMEN[f('stimme')]}“.\n\n"
+                    f"Bis zum Ende der Frist können Sie Ihre Stimme im Portal ändern.\n\nMit freundlichen Grüßen\n{db.setting('verwaltung_name')}")
+    except mail.MailFehler:
+        pass
+    flash(f"Ihre Stimme „{STIMMEN[f('stimme')]}“ ist gespeichert.", "ok")
     return redirect("/portal")

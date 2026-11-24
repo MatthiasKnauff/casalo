@@ -58,3 +58,17 @@ def auswerten(mehrheit, ja, nein, enthaltung=0, ja_mea=None, gesamt_mea=1000.0):
 
 def beschluss_nr(jahr, lfd):
     return f"{lfd} ({jahr})"
+
+
+def umlauf_auswerten(mehrheit, stimmen, berechtigte):
+    """Umlaufbeschluss (§ 23 Abs. 3 WEG). stimmen: {person_id: ja|nein|enthaltung}, berechtigte: {person_id}.
+
+    allstimmig: angenommen nur, wenn jeder Berechtigte in Textform zugestimmt hat.
+    einfach (nur nach Ermächtigungsbeschluss, § 23 Abs. 3 Satz 2): mehr Ja- als Nein-Stimmen der abgegebenen; Köpfe.
+    """
+    gueltig = {p: s for p, s in stimmen.items() if p in berechtigte}
+    if mehrheit == "allstimmig":
+        return "angenommen" if berechtigte and all(gueltig.get(p) == "ja" for p in berechtigte) else "abgelehnt"
+    ja = sum(1 for s in gueltig.values() if s == "ja")
+    nein = sum(1 for s in gueltig.values() if s == "nein")
+    return "angenommen" if ja > nein else "abgelehnt"

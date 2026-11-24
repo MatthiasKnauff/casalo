@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titel %}Umlaufbeschlüsse{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}">WEG {{ g.name }}</a></p>
+  <h1>Umlaufbeschlüsse</h1><p class="unter">Beschluss ohne Versammlung (§ 23 Abs. 3 WEG) · Stimme im Portal, per E-Mail oder Brief</p></div></div>
+<section class="karte eng"><div class="scroll"><table class="tab" data-tab="umlaeufe">
+  <thead><tr><th>Gegenstand</th><th>Mehrheit</th><th>Frist</th><th class="zahl">Ja</th><th class="zahl">Nein</th><th class="zahl">fehlen</th><th>Status</th></tr></thead><tbody>
+  {% for u in liste %}<tr onclick="location.href='/umlauf/{{ u.id }}'" style="cursor:pointer"><td><a href="/umlauf/{{ u.id }}"><b>{{ u.titel }}</b></a></td>
+    <td class="klein">{{ 'alle' if u.mehrheit == 'allstimmig' else 'einfach' }}</td><td>{{ u.frist|datum }}</td>
+    <td class="zahl">{{ u.stand.zaehl.ja }}</td><td class="zahl">{{ u.stand.zaehl.nein }}</td><td class="zahl">{{ u.stand.fehlen|length }}</td>
+    <td>{% if u.status == 'beendet' %}<span class="chip {{ 'ok' if u.ergebnis == 'angenommen' else 'fehler' }}">{{ u.ergebnis }}</span>{% elif u.status == 'laeuft' %}<span class="chip warnung">läuft</span>{% else %}<span class="chip info">Entwurf</span>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="7" class="leer">Noch kein Umlaufbeschluss.</td></tr>{% endfor %}
+</tbody></table></div></section>
+<section class="karte"><h2>Neuer Umlaufbeschluss</h2><form method="post"><div class="felder">
+  <div style="grid-column: span 2"><label>Gegenstand</label><input name="titel" required placeholder="z. B. Austausch der Briefkastenanlage"></div>
+  <div><label>Stimmabgabe bis</label><input type="date" name="frist" required></div>
+  <div><label>Erforderlich</label><select name="mehrheit">{% for k, t in mehrheiten.items() %}<option value="{{ k }}">{{ t }}</option>{% endfor %}</select></div>
+</div>
+<label>Beschlussantrag (Wortlaut)</label><textarea name="antrag" required placeholder="Die Gemeinschaft beschließt …"></textarea>
+<label>Ermächtigungsbeschluss (nur bei einfacher Mehrheit)</label><select name="ermaechtigung"><option value="">–</option>{% for b in beschluesse %}<option value="Nr. {{ b.lfd }} vom {{ b.datum|datum }}">Nr. {{ b.lfd }} vom {{ b.datum|datum }}: {{ b.text[:70] }}</option>{% endfor %}</select>
+<p class="hinweis">Ohne Versammlung braucht ein Beschluss die Zustimmung aller Eigentümer in Textform. Die einfache Mehrheit genügt nur, wenn die Versammlung das für genau diesen Gegenstand beschlossen hat.</p>
+<p><button>Als Entwurf anlegen</button></p></form></section>
+{% endblock %}

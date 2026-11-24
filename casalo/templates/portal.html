@@ -13,6 +13,17 @@
     <span class="klein muted">{{ 'alles bezahlt' if e.offen <= 0 else e.posten|length ~ ' Posten' }}</span></div>
   {% if e.versammlungen %}{% set v = e.versammlungen[0] %}<div class="kachel"><span class="klein muted">nächste Versammlung</span><b>{{ v.beginn[:10]|datum }}</b><span class="klein muted">{{ v.beginn[11:16] }} Uhr · {{ v.ort }}</span></div>{% endif %}
 </div>
+{% for u in e.umlaeufe %}
+<section class="karte"><h2>Abstimmung ohne Versammlung: {{ u.titel }}</h2>
+  <p style="white-space:pre-line">{{ u.antrag }}</p>
+  <p class="hinweis">{{ 'Der Beschluss kommt nur zustande, wenn alle Eigentümer zustimmen.' if u.mehrheit == 'allstimmig' else 'Es entscheidet die Mehrheit der abgegebenen Stimmen.' }} Abstimmen bis {{ u.frist|datum }}.
+    {% if u.meine %}<b>Ihre Stimme: {{ {'ja':'Ja','nein':'Nein','enthaltung':'Enthaltung'}[u.meine] }}</b> – änderbar bis zum Ende der Frist.{% endif %}</p>
+  <form method="post" action="/portal/umlauf/{{ u.id }}" class="zeile"><input type="hidden" name="_csrf" value="{{ csrf_token }}">
+    <button name="stimme" value="ja" class="{{ '' if u.meine == 'ja' else 'zweit' }}">Ja</button>
+    <button name="stimme" value="nein" class="{{ '' if u.meine == 'nein' else 'zweit' }}">Nein</button>
+    <button name="stimme" value="enthaltung" class="{{ '' if u.meine == 'enthaltung' else 'zweit' }}">Enthaltung</button></form>
+  <p class="hinweis">Sie erhalten eine Bestätigung Ihrer Stimme per E-Mail.</p>
+</section>{% endfor %}
 {% if e.posten %}
 <section class="karte eng"><h2 style="padding:14px 14px 0">Offene Zahlungen</h2><div class="scroll"><table>
   <tr><th>Forderung</th><th>fällig</th><th class="zahl">offen</th></tr>

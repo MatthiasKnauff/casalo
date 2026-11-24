@@ -97,6 +97,23 @@ beschlossene Wirtschaftspläne, versandte Einladungen und Niederschriften, angef
 und – nach Versand oder „Im Portal zeigen“ – Einzelabrechnung und § 35a-Bescheinigung. Nachrichten und Schadensmeldungen
 werden Vorgänge. Belege der Gemeinschaft nur, wenn unter Einstellungen → Eigentümerportal freigeschaltet. Braucht den E-Mail-Versand.
 
+## Umlaufbeschlüsse, Dokumente, Verkauf
+
+- **Umlaufbeschluss** (Gemeinschaft → Umlaufbeschlüsse): Beschluss ohne Versammlung (§ 23 Abs. 3 WEG). Grundsatz: alle
+  Eigentümer müssen zustimmen; einfache Mehrheit nur mit Ermächtigungsbeschluss der Versammlung für genau diesen Gegenstand.
+  „Starten“ schreibt alle per E-Mail an (Eigentümer ohne E-Mail per Brief). Abstimmung im Portal mit Bestätigung per E-Mail,
+  Stimmen per E-Mail oder Brief trägt das Büro ein. Das Ergebnis lässt sich erst feststellen, wenn alle abgestimmt haben oder
+  die Frist abgelaufen ist; es geht in die Beschluss-Sammlung und per E-Mail an die Eigentümer.
+- **Dokumente** (Gemeinschaft → Dokumente): Teilungserklärung, Verträge, Versicherungen, Pläne, Gutachten. Je Dokument
+  einstellbar, ob es im Eigentümerportal erscheint.
+- **Verkauf einer Einheit** (Detailkarte der Einheit → „Verkauf“): Verwalterauskunft für Käufer und Notar (Hausgeld,
+  Rückstände, künftige Sonderumlagen, Rücklage nach MEA, Beschlüsse der letzten drei Jahre) und – wenn die
+  Gemeinschaftsordnung sie verlangt (Einstellungen der Gemeinschaft) – die Zustimmung nach § 12 WEG.
+  Nach dem Eigentümerwechsel sehen neue Eigentümer im Portal und im Mahnwesen nur ihre eigene Zeit; Rückstände des
+  Vorbesitzers stehen im Mahnwesen getrennt („+ … Vorbesitzer“).
+- **Notdienst im KI-Telefon**: Eine Notfallregel kann statt einer Nummer einen Dienstleister nennen – dann gilt dessen
+  Notdienstnummer, auch wenn sie sich später ändert.
+
 ## DATEV
 
 Einstellungen → DATEV: Berater- und Mandantennummer, Sammelkonten. Sachkonten je Kostenart und Bankkonto unter

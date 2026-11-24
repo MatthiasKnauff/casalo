@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titel %}Dokumente{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}">WEG {{ g.name }}</a></p>
+  <h1>Dokumente</h1><p class="unter">Teilungserklärung, Verträge, Versicherungen, Pläne · {{ anzahl }} Dateien</p></div></div>
+<section class="karte"><h2>Ablegen</h2>
+  <form method="post" enctype="multipart/form-data"><div class="felder">
+    <div style="grid-column: span 2"><label>Datei (PDF, PNG, JPEG)</label><input type="file" name="datei" accept="application/pdf,image/png,image/jpeg" required></div>
+    <div><label>Titel</label><input name="titel" placeholder="sonst Dateiname"></div>
+    <div><label>Kategorie</label><select name="kategorie">{% for k, t in kategorien.items() %}<option value="{{ k }}">{{ t }}</option>{% endfor %}</select></div>
+    <div><label>Datum</label><input type="date" name="datum"></div>
+  </div><label class="haken"><input type="checkbox" name="portal" value="1"> im Eigentümerportal zeigen</label>
+  <p><button>Ablegen</button></p></form></section>
+{% for k, liste in gruppen.items() if liste %}
+<section class="karte eng"><h2 style="padding:14px 14px 0">{{ kategorien[k] }}</h2><div class="scroll"><table>
+  {% for d in liste %}<tr><td><a href="/dokument/{{ d.id }}" target="_blank"><b>{{ d.titel }}</b></a> <span class="muted klein">{{ d.name }} · {{ (d.groesse / 1024)|round|int }} KB</span></td>
+    <td class="klein">{{ d.datum|datum if d.datum }}</td>
+    <td><form method="post" action="/dokument/{{ d.id }}/portal" class="inline"><button class="klein {{ '' if d.portal else 'zweit' }}" title="im Eigentümerportal sichtbar?">{{ 'im Portal' if d.portal else 'nicht im Portal' }}</button></form></td>
+    <td><form method="post" action="/dokument/{{ d.id }}/loeschen" data-frage="„{{ d.titel }}“ löschen?" data-ok="Löschen"><button class="klein gefahr" aria-label="Löschen">✕</button></form></td></tr>{% endfor %}
+</table></div></section>
+{% endfor %}
+<p class="hinweis">Dateien liegen im Datenordner unter <code>belege/</code> und gehören mit in die Sicherung.</p>
+{% endblock %}

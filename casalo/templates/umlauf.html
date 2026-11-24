@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block titel %}{{ u.titel }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}/umlauf">WEG {{ g.name }} · Umlaufbeschlüsse</a></p>
+  <h1>{{ u.titel }}</h1>
+  <p class="unter">{{ mehrheiten[u.mehrheit] }}{% if u.ermaechtigung %} – Ermächtigung: {{ u.ermaechtigung }}{% endif %} · Frist {{ u.frist|datum }}</p></div>
+  <div class="zeile">
+  {% if u.status == 'entwurf' %}
+    <form method="post" action="/umlauf/{{ u.id }}/loeschen" data-frage="Entwurf löschen?" data-ok="Löschen"><button class="gefahr">Löschen</button></form>
+    <form method="post" action="/umlauf/{{ u.id }}/starten" data-frage="Umlaufbeschluss starten und alle Eigentümer anschreiben?" data-ok="Starten"><button>Starten</button></form>
+  {% elif u.status == 'laeuft' and (not s.fehlen or u.frist < heute) %}
+    <form method="post" action="/umlauf/{{ u.id }}/beenden" data-frage="Abstimmung beenden, Ergebnis „{{ s.vorlaeufig }}“ feststellen und eintragen?" data-ok="Beenden"><button>Ergebnis feststellen</button></form>
+  {% endif %}</div>
+</div>
+<section class="karte"><h2>Beschlussantrag</h2><p style="white-space:pre-line">{{ u.antrag }}</p>
+{% if beschluss %}<p><span class="chip {{ 'ok' if u.ergebnis == 'angenommen' else 'fehler' }}">{{ u.ergebnis }}</span> Beschluss-Sammlung Nr. {{ beschluss.lfd }} vom {{ beschluss.datum|datum }} – {{ beschluss.ergebnis }}</p>
+{% elif u.status == 'laeuft' %}<p>Stand jetzt: <span class="chip {{ 'ok' if s.vorlaeufig == 'angenommen' else 'warnung' }}">{{ s.vorlaeufig }}</span></p>{% endif %}</section>
+<div class="raster">
+  <div class="kachel"><span class="klein muted">Ja</span><b class="gruen">{{ s.zaehl.ja }}</b></div>
+  <div class="kachel"><span class="klein muted">Nein</span><b class="{{ 'rot' if s.zaehl.nein }}">{{ s.zaehl.nein }}</b></div>
+  <div class="kachel"><span class="klein muted">Enthaltung</span><b>{{ s.zaehl.enthaltung }}</b></div>
+  <div class="kachel"><span class="klein muted">noch keine Stimme</span><b>{{ s.fehlen|length }} von {{ s.berechtigte|length }}</b></div>
+</div>
+<section class="karte eng"><div class="scroll"><table class="tab" data-tab="umlauf-stimmen">
+  <thead><tr><th>Eigentümer</th><th>Stimme</th><th>abgegeben</th><th>Weg</th>{% if u.status == 'laeuft' %}<th data-nosort data-name="Eintragen">Eingang per Post/E-Mail</th>{% endif %}</tr></thead><tbody>
+  {% for p in s.berechtigte %}{% set st = s.stimmen.get(p.id) %}
+  <tr data-karte="/karte/person/{{ p.id }}"><td>{{ p.firma or (p.vorname ~ ' ' ~ p.nachname) }}</td>
+    <td>{% if st %}<span class="chip {{ 'ok' if st.stimme == 'ja' else 'fehler' if st.stimme == 'nein' else 'info' }}">{{ STIMMEN[st.stimme] }}</span>{% else %}<span class="muted">–</span>{% endif %}</td>
+    <td class="klein muted">{{ st.zeit[:16].replace('T', ' ') if st }}</td><td class="klein">{{ {'portal':'Portal','email':'E-Mail','post':'Brief'}[st.weg] if st }}</td>
+    {% if u.status == 'laeuft' %}<td><form method="post" action="/umlauf/{{ u.id }}/stimme" class="zeile"><input type="hidden" name="person_id" value="{{ p.id }}">
+      <select name="stimme" style="width:auto;min-height:32px">{% for k, t in STIMMEN.items() %}<option value="{{ k }}">{{ t }}</option>{% endfor %}</select>
+      <select name="weg" style="width:auto;min-height:32px"><option value="email">E-Mail</option><option value="post">Brief</option></select><button class="klein zweit">Eintragen</button></form></td>{% endif %}</tr>
+  {% endfor %}
+</tbody></table></div></section>
+<p class="hinweis">Stimmen per E-Mail oder Brief mit Namen des Erklärenden genügen der Textform; die Originale bitte aufbewahren. Stimmen im Portal werden dem Eigentümer per E-Mail bestätigt.</p>
+{% endblock %}

@@ -213,6 +213,7 @@
         <option value="mea" {{ 'selected' if g.stimmprinzip == 'mea' }}>nach MEA (Teilungserklärung)</option></select></div>
     </div>
     <label class="haken"><input type="checkbox" name="hybrid_erlaubt" {{ 'checked' if g.hybrid_erlaubt }}> Online-Teilnahme ist beschlossen (§ 23 Abs. 1a WEG)</label>
+    <label class="haken"><input type="checkbox" name="zustimmung_12" {{ 'checked' if g.zustimmung_12 }}> Verkauf braucht die Zustimmung des Verwalters (§ 12 WEG, laut Gemeinschaftsordnung)</label>
     <label>Notiz</label><textarea name="notiz">{{ g.notiz }}</textarea>
     <p><button>Speichern</button></p>
   </form>

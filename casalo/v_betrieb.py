@@ -392,25 +392,41 @@ def naechste_belegnr(gid, jahr):
     return f"B-{jahr}-{n + 1:04d}"
 
 
-def beleg_speichern(gid, datei, buchung_id=None, auftrag_id=None):
-    """Datei prüfen (PDF, PNG, JPEG am Inhalt erkannt) und ablegen. → beleg_id; wirft ValueError."""
+def datei_ablegen(datei):
+    """Hochgeladene Datei prüfen (PDF, PNG, JPEG – am Inhalt erkannt) und im Datenordner ablegen.
+
+    → {datei, name, mime, groesse}; wirft ValueError. Gemeinsam für Belege und Dokumente.
+    """
     inhalt = datei.read()
     if not inhalt:
         raise ValueError("Die Datei ist leer.")
     typ = next((t for sig, t in BELEG_TYPEN.items() if inhalt.startswith(sig)), None)
     if not typ:
         raise ValueError("Nur PDF, PNG oder JPEG.")
-    name = os.path.basename(datei.filename or "beleg")[:120] or "beleg"
     datei_name = f"{uuid.uuid4().hex}{typ[1]}"
     with open(os.path.join(beleg_ordner(), datei_name), "wb") as fh:
         fh.write(inhalt)
+    return {"datei": datei_name, "name": os.path.basename(datei.filename or "datei")[:120] or "datei", "mime": typ[0],
+            "groesse": len(inhalt)}
+
+
+def datei_entfernen(datei_name):
+    try:
+        os.remove(os.path.join(beleg_ordner(), datei_name))
+    except FileNotFoundError:
+        pass
+
+
+def beleg_speichern(gid, datei, buchung_id=None, auftrag_id=None):
+    """Beleg ablegen und fortlaufend nummerieren. → beleg_id; wirft ValueError."""
+    d = datei_ablegen(datei)
     jahr = _heute().year
     if buchung_id:
         b = db.q("SELECT datum FROM buchung WHERE id = ?", (buchung_id,), one=True)
         jahr = int(b["datum"][:4]) if b else jahr
     return db.ex("INSERT INTO beleg (gemeinschaft_id, buchung_id, auftrag_id, nr, name, datei, mime, groesse, hochgeladen) "
                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                 (gid, buchung_id, auftrag_id, naechste_belegnr(gid, jahr), name, datei_name, typ[0], len(inhalt),
+                 (gid, buchung_id, auftrag_id, naechste_belegnr(gid, jahr), d["name"], d["datei"], d["mime"], d["groesse"],
                   datetime.datetime.now().isoformat(timespec="minutes")))
 
 
@@ -442,6 +458,7 @@ def beleg(bid):
 
 
 def beleg_senden(b):
+    """Abgelegte Datei ausliefern (Belege und Dokumente)."""
     pfad = os.path.join(beleg_ordner(), b["datei"])
     if not os.path.isfile(pfad):
         abort(404)
@@ -453,10 +470,7 @@ def beleg_senden(b):
 @bp.post("/beleg/<int:bid>/loeschen")
 def beleg_loeschen(bid):
     b = _zeile_oder_404("beleg", bid)
-    try:
-        os.remove(os.path.join(beleg_ordner(), b["datei"]))
-    except FileNotFoundError:
-        pass
+    datei_entfernen(b["datei"])
     db.ex("DELETE FROM beleg WHERE id = ?", (bid,))
     flash(f"Beleg {b['nr']} gelöscht.", "ok")
     return redirect(request.referrer or "/")
@@ -492,3 +506,56 @@ def datev_seite(gid):
                            kostenarten=db.q("SELECT * FROM kostenart WHERE gemeinschaft_id = ? ORDER BY reihenfolge, id", (gid,)),
                            konten=db.q("SELECT * FROM konto WHERE gemeinschaft_id = ? ORDER BY art, id", (gid,)),
                            standard_bank=datev.STANDARD_BANK)
+
+
+# ------------------------------------------------------------------ Dokumente der Gemeinschaft
+KATEGORIEN = {"teilungserklaerung": "Teilungserklärung & Gemeinschaftsordnung", "vertrag": "Verträge", "versicherung": "Versicherungen",
+              "plan": "Pläne & Grundrisse", "gutachten": "Gutachten & Energieausweis", "behoerde": "Behörden & Bescheide",
+              "protokoll": "Protokolle & Beschlüsse (alt)", "sonstiges": "Sonstiges"}
+
+
+@bp.route("/g/<int:gid>/dokumente", methods=["GET", "POST"])
+def dokumente(gid):
+    g = gemeinschaft_oder_404(gid)
+    if request.method == "POST":
+        datei = request.files.get("datei")
+        if not datei or not datei.filename:
+            flash("Keine Datei gewählt.", "fehler")
+            return redirect(request.url)
+        try:
+            d = datei_ablegen(datei)
+        except ValueError as e:
+            flash(str(e), "fehler")
+            return redirect(request.url)
+        db.ex("INSERT INTO dokument (gemeinschaft_id, titel, kategorie, datum, datei, name, mime, groesse, portal, hochgeladen) "
+              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              (gid, f("titel") or d["name"].rsplit(".", 1)[0], f("kategorie") if f("kategorie") in KATEGORIEN else "sonstiges",
+               f("datum"), d["datei"], d["name"], d["mime"], d["groesse"], 1 if request.form.get("portal") else 0,
+               datetime.datetime.now().isoformat(timespec="minutes")))
+        flash("Dokument abgelegt.", "ok")
+        return redirect(f"/g/{gid}/dokumente")
+    rows = db.q("SELECT * FROM dokument WHERE gemeinschaft_id = ? ORDER BY kategorie, datum DESC, titel", (gid,))
+    gruppen = {k: [r for r in rows if r["kategorie"] == k] for k in KATEGORIEN}
+    return render_template("dokumente.html", g=g, gruppen=gruppen, kategorien=KATEGORIEN, anzahl=len(rows))
+
+
+@bp.get("/dokument/<int:did>")
+def dokument(did):
+    return beleg_senden(_zeile_oder_404("dokument", did))
+
+
+@bp.post("/dokument/<int:did>/portal")
+def dokument_portal(did):
+    d = _zeile_oder_404("dokument", did)
+    db.ex("UPDATE dokument SET portal = ? WHERE id = ?", (0 if d["portal"] else 1, did))
+    flash(f"„{d['titel']}“ ist {'nicht mehr' if d['portal'] else 'jetzt'} im Eigentümerportal sichtbar.", "ok")
+    return redirect(f"/g/{d['gemeinschaft_id']}/dokumente")
+
+
+@bp.post("/dokument/<int:did>/loeschen")
+def dokument_loeschen(did):
+    d = _zeile_oder_404("dokument", did)
+    datei_entfernen(d["datei"])
+    db.ex("DELETE FROM dokument WHERE id = ?", (did,))
+    flash(f"„{d['titel']}“ gelöscht.", "ok")
+    return redirect(f"/g/{d['gemeinschaft_id']}/dokumente")

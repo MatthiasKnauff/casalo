@@ -19,5 +19,6 @@
     <span class="klein muted">{{ ('seit ' ~ t.von|datum) if t.von else '' }}{{ (' bis ' ~ t.bis|datum) if t.bis else '' }}</span></li>
   {% else %}<li class="rot">kein Eigentümer eingetragen</li>{% endfor %}
 </ul>
+<p><a class="knopf zweit klein" href="/einheit/{{ e.id }}/verkauf">Verkauf: Auskunft, Zustimmung, Wechsel</a></p>
 {% if vorgaenge %}<h3>Vorgänge</h3><ul class="karte-liste">{% for v in vorgaenge %}<li><a href="#" hx-get="/karte/vorgang/{{ v.id }}" hx-target="#rechts-inhalt">{{ v.titel }}</a> <span class="chip {{ 'ok' if v.status == 'erledigt' else 'warnung' }}">{{ v.status }}</span></li>{% endfor %}</ul>{% endif %}
 {% if buchungen %}<h3>Buchungen</h3><table class="kv-tab">{% for b in buchungen %}<tr><th>{{ b.datum|datum }}</th><td class="zahl">{{ b.betrag_cent|eur }}</td></tr>{% endfor %}</table>{% endif %}

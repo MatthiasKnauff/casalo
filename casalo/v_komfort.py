@@ -285,7 +285,7 @@ KARTEN = {}          # weitere Detailkarten, von anderen Modulen eingetragen: ar
 
 
 # ------------------------------------------------------------------ Gemeinschaft oben wählen
-UNTERSEITEN = {"auftrag": "auftrag", "sonderumlage": "sonderumlage", "versammlung": "versammlung"}   # /<art>/<id> gehört zu einer WEG
+UNTERSEITEN = ("auftrag", "sonderumlage", "versammlung", "umlauf")     # /<tabelle>/<id> gehört zu einer WEG
 
 
 @bp.before_app_request
@@ -295,9 +295,9 @@ def gemeinschaft_merken():
     if m:
         session["gid"] = int(m.group(1))
         return
-    m = re.match(r"^/(auftrag|sonderumlage|versammlung)/(\d+)", request.path)
+    m = re.match(r"^/(" + "|".join(UNTERSEITEN) + r")/(\d+)", request.path)
     if m and session.get("uid"):
-        r = db.q(f"SELECT gemeinschaft_id FROM {UNTERSEITEN[m.group(1)]} WHERE id = ?", (int(m.group(2)),), one=True)
+        r = db.q(f"SELECT gemeinschaft_id FROM {m.group(1)} WHERE id = ?", (int(m.group(2)),), one=True)
         if r:
             session["gid"] = r["gemeinschaft_id"]
 
@@ -329,13 +329,10 @@ STANDARD = {"schema": "dunkel", "farbe": "pink", "schrift": "standard", "groesse
 
 
 def darstellung(u=None):
-    u = u or aktuelle_benutzer_sicher()
+    u = u or aktueller_benutzer()
     d = dict(STANDARD)
     if u:
-        try:
-            d.update(json.loads(u["darstellung"] or "{}"))
-        except (ValueError, IndexError, KeyError):
-            pass
+        d.update(json.loads(u["darstellung"]))
     if d["farbe"] not in FARBEN:          # ältere Einstellung (Blau, Petrol …) → nächstliegende Farbe
         d["farbe"] = {"petrol": "tuerkis", "bordeaux": "pink", "graphit": "blau"}.get(d["farbe"], "pink")
     if d.get("schema") not in SCHEMATA:
@@ -343,13 +340,6 @@ def darstellung(u=None):
     farbe = FARBEN[d["farbe"]]
     return {**d, "akzent_dunkel": farbe[1], "akzent_hell": farbe[2],
             "schrift_css": SCHRIFTEN.get(d["schrift"], SCHRIFTEN["standard"])[1]}
-
-
-def aktuelle_benutzer_sicher():
-    try:
-        return aktueller_benutzer()
-    except Exception:
-        return None
 
 
 @bp.route("/fuer-mich", methods=["GET", "POST"])
@@ -371,13 +361,13 @@ def fuer_mich():
 
 def kontext():
     """Für base.html: Gemeinschaftswahl, Darstellung, offene Einrichtungen."""
-    if not aktuelle_benutzer_sicher():
+    if not aktueller_benutzer():
         return {}
     gs = db.q("SELECT id, name, nr, assistent FROM gemeinschaft ORDER BY name")
     g = aktuelle_gemeinschaft()
     wahl = [{"t": x["name"], "zusatz": x["nr"], "href": f"/g/{x['id']}", "an": bool(g and g["id"] == x["id"])} for x in gs]
     wahl.append({"t": "Neue Gemeinschaft (Assistent)", "ic": "＋", "href": "/assistent"})
-    u = aktuelle_benutzer_sicher()
+    u = aktueller_benutzer()
     menue = [{"t": "Für mich: Darstellung", "ic": "◐", "href": "/fuer-mich"}]
     if u["rolle"] == "admin":
         menue += [{"t": "Einstellungen der Verwaltung", "ic": "⚙", "href": "/einstellungen"},

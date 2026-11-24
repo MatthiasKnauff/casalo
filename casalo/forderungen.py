@@ -72,13 +72,15 @@ def _monate(jahr, bis):
     return 12 if bis.year > jahr else bis.month
 
 
-def offene_posten(einheit_id, stichtag=None):
+def offene_posten(einheit_id, stichtag=None, ab=None):
     """Liste fälliger, offener Forderungen gegen die Einheit, älteste zuerst.
 
     Hausgeld: Vorschüsse laut Wirtschaftsplan, je Monat zum Ersten fällig (Vorjahr und laufendes Jahr).
     Sonderumlagen: ab Fälligkeit. Zahlungen tilgen zuerst die älteste Forderung.
+    ab: nur Forderungen und Zahlungen ab diesem Tag (Eigentümer seit) – Rückstände des Vorbesitzers bleiben dessen Sache.
     """
     stichtag = stichtag or datetime.date.today()
+    ab_iso = ab or "0000-00-00"
     e = db.q("SELECT * FROM einheit WHERE id = ?", (einheit_id,), one=True)
     gid = e["gemeinschaft_id"]
     posten = []
@@ -87,51 +89,61 @@ def offene_posten(einheit_id, stichtag=None):
         if not wp["wp"]:
             continue
         monat = wp["einheiten"][einheit_id]["monat"]
-        n = _monate(jahr, stichtag)
-        soll = [(datetime.date(jahr, m, 1), monat) for m in range(1, n + 1)]
-        ist = daten.zahlungen(gid, jahr).get(einheit_id, 0)
+        soll = [(datetime.date(jahr, m, 1), monat) for m in range(1, _monate(jahr, stichtag) + 1)
+                if datetime.date(jahr, m, 1).isoformat() >= ab_iso]
+        ist = db.q("SELECT COALESCE(SUM(betrag_cent), 0) AS c FROM buchung WHERE einheit_id = ? AND art = 'hausgeld' "
+                   "AND datum BETWEEN ? AND ?", (einheit_id, max(f"{jahr}-01-01", ab_iso), f"{jahr}-12-31"), one=True)["c"]
         for faellig, betrag in soll:                       # Zahlungen des Jahres tilgen die ältesten Monate
             getilgt = min(betrag, max(0, ist))
             ist -= getilgt
             if betrag - getilgt > 0:
                 posten.append({"text": f"Hausgeld {faellig:%m/%Y}", "faellig": faellig.isoformat(), "betrag": betrag - getilgt})
-    for u in offene_umlagen(einheit_id, stichtag.isoformat()):
-        posten.append({"text": f"Sonderumlage „{u['titel']}“", "faellig": u["faellig"], "betrag": u["offen"]})
+    for u in db.q("SELECT * FROM sonderumlage WHERE gemeinschaft_id = ? AND faellig <= ? AND faellig >= ? ORDER BY faellig",
+                  (gid, stichtag.isoformat(), ab_iso)):
+        soll = umlage_anteile(u).get(einheit_id, 0)
+        ist = db.q("SELECT COALESCE(SUM(betrag_cent), 0) AS c FROM buchung WHERE sonderumlage_id = ? AND einheit_id = ? AND datum >= ?",
+                   (u["id"], einheit_id, ab_iso), one=True)["c"]
+        if soll - ist > 0:
+            posten.append({"text": f"Sonderumlage „{u['titel']}“", "faellig": u["faellig"], "betrag": soll - ist})
     posten.sort(key=lambda p: p["faellig"])
     return posten
 
 
+def eigentuemer_seit(einheit_id):
+    """Beginn des Eigentums der aktuellen Eigentümer (spätestes „von“), sonst None."""
+    r = db.q("SELECT MAX(von) AS v FROM eigentum WHERE einheit_id = ? AND bis IS NULL AND von != ''", (einheit_id,), one=True)
+    return r["v"] if r and r["v"] else None
+
+
 # ------------------------------------------------------------------ Mahnwesen
 def mahn_einstellungen():
-    return {
-        "frist_tage": int(db.setting("mahn_frist_tage", "14") or 14),
-        "schwelle": int(db.setting("mahn_schwelle_cent", "500") or 500),
-        "gebuehr": {1: int(db.setting("mahn_gebuehr_1", "0") or 0), 2: int(db.setting("mahn_gebuehr_2", "500") or 0),
-                    3: int(db.setting("mahn_gebuehr_3", "1000") or 0)},
-    }
+    return {"frist_tage": int(db.setting("mahn_frist_tage")), "schwelle": int(db.setting("mahn_schwelle_cent")),
+            "gebuehr": {s: int(db.setting(f"mahn_gebuehr_{s}")) for s in (1, 2, 3)}}
 
 
 def mahnvorschlag(einheit_id, heute=None):
     """→ {posten, summe, letzte, stufe (None = nichts zu tun), grund}"""
     heute = heute or datetime.date.today()
-    posten = offene_posten(einheit_id, heute)
+    seit = eigentuemer_seit(einheit_id)
+    posten = offene_posten(einheit_id, heute, seit)          # gemahnt werden die aktuellen Eigentümer für ihre Zeit
     summe = sum(p["betrag"] for p in posten)
+    vorbesitzer = (sum(p["betrag"] for p in offene_posten(einheit_id, heute)) - summe) if seit else 0
     letzte = db.q("SELECT * FROM mahnung WHERE einheit_id = ? AND status = 'offen' ORDER BY stufe DESC, datum DESC LIMIT 1",
                   (einheit_id,), one=True)
     st = mahn_einstellungen()
     if summe < st["schwelle"]:
         if letzte:   # alles bezahlt → laufende Mahnungen erledigt
             db.ex("UPDATE mahnung SET status = 'bezahlt' WHERE einheit_id = ? AND status = 'offen'", (einheit_id,))
-        return {"posten": posten, "summe": summe, "letzte": None, "stufe": None, "grund": "kein Rückstand"}
+        return {"posten": posten, "summe": summe, "vorbesitzer": max(0, vorbesitzer), "letzte": None, "stufe": None, "grund": "kein Rückstand"}
     if not letzte:
-        return {"posten": posten, "summe": summe, "letzte": None, "stufe": 1, "grund": "erste Zahlungserinnerung"}
+        return {"posten": posten, "summe": summe, "vorbesitzer": max(0, vorbesitzer), "letzte": None, "stufe": 1, "grund": "erste Zahlungserinnerung"}
     if heute.isoformat() <= letzte["frist"]:
-        return {"posten": posten, "summe": summe, "letzte": letzte, "stufe": None,
+        return {"posten": posten, "summe": summe, "vorbesitzer": max(0, vorbesitzer), "letzte": letzte, "stufe": None,
                 "grund": f"Frist der {STUFEN[letzte['stufe']]} läuft bis {datetime.date.fromisoformat(letzte['frist']):%d.%m.%Y}"}
     if letzte["stufe"] >= 3:
-        return {"posten": posten, "summe": summe, "letzte": letzte, "stufe": None,
+        return {"posten": posten, "summe": summe, "vorbesitzer": max(0, vorbesitzer), "letzte": letzte, "stufe": None,
                 "grund": "letzte Mahnung erfolglos – gerichtliches Mahnverfahren prüfen"}
-    return {"posten": posten, "summe": summe, "letzte": letzte, "stufe": letzte["stufe"] + 1,
+    return {"posten": posten, "summe": summe, "vorbesitzer": max(0, vorbesitzer), "letzte": letzte, "stufe": letzte["stufe"] + 1,
             "grund": f"Frist der {STUFEN[letzte['stufe']]} abgelaufen"}
 
 

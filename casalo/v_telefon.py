@@ -40,17 +40,18 @@ def telefon_einstellungen():
         elif bereich == "regel":
             art = f("notfallart") if f("notfallart") in telefon.NOTFALLARTEN else "sonstiges"
             aktion = f("aktion") if f("aktion") in telefon.AKTIONEN else "aufnehmen"
-            if aktion in ("weiterleiten", "ansagen") and not f("nummer"):
-                flash("Für Weiterleiten oder Ansagen wird eine Nummer gebraucht.", "fehler")
+            did = f_int("dienstleister_id") or None
+            if aktion in ("weiterleiten", "ansagen") and not f("nummer") and not did:
+                flash("Für Weiterleiten oder Ansagen wird eine Nummer oder ein Dienstleister mit Notdienst gebraucht.", "fehler")
                 return redirect("/telefon/einstellungen")
             gid = f_int("gemeinschaft_id") or None
             rid = f_int("id")
             if rid:
-                db.ex("UPDATE notfallregel SET gemeinschaft_id = ?, notfallart = ?, aktion = ?, nummer = ?, ansage = ? WHERE id = ?",
-                      (gid, art, aktion, f("nummer"), f("ansage"), rid))
+                db.ex("UPDATE notfallregel SET gemeinschaft_id = ?, notfallart = ?, aktion = ?, nummer = ?, ansage = ?, dienstleister_id = ? "
+                      "WHERE id = ?", (gid, art, aktion, f("nummer"), f("ansage"), did, rid))
             else:
-                db.ex("INSERT INTO notfallregel (gemeinschaft_id, notfallart, aktion, nummer, ansage) VALUES (?, ?, ?, ?, ?)",
-                      (gid, art, aktion, f("nummer"), f("ansage")))
+                db.ex("INSERT INTO notfallregel (gemeinschaft_id, notfallart, aktion, nummer, ansage, dienstleister_id) VALUES (?, ?, ?, ?, ?, ?)",
+                      (gid, art, aktion, f("nummer"), f("ansage"), did))
         elif bereich == "verbindung":
             fehler = telefon.verbindung_speichern(request.form)
             for x in fehler:
@@ -67,9 +68,11 @@ def telefon_einstellungen():
             return redirect("/telefon/einstellungen")
         flash("Gespeichert.", "ok")
         return redirect("/telefon/einstellungen")
-    regeln = db.q("SELECT r.*, g.name AS g_name FROM notfallregel r LEFT JOIN gemeinschaft g ON g.id = r.gemeinschaft_id "
+    regeln = db.q("SELECT r.*, g.name AS g_name, d.firma AS d_firma FROM notfallregel r LEFT JOIN gemeinschaft g ON g.id = r.gemeinschaft_id "
+                  "LEFT JOIN dienstleister d ON d.id = r.dienstleister_id "
                   "ORDER BY g.name IS NOT NULL, g.name, r.notfallart")
-    return render_template("telefon_einstellungen.html", regeln=regeln, token=db.telefon_token(),
+    return render_template("telefon_einstellungen.html", regeln=regeln,
+                           dienstleister=db.q("SELECT * FROM dienstleister WHERE aktiv = 1 AND (notdienst != '' OR telefon != '') ORDER BY gewerk, firma"), token=db.telefon_token(),
                            begruessung=db.setting("telefon_begruessung"), buerozeiten=db.setting("buerozeiten"),
                            anonymisieren=db.setting("anonymisieren") == "1",
                            ist_buerozeit=telefon.ist_buerozeit(db.setting("buerozeiten")),

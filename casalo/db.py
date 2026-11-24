@@ -354,6 +354,45 @@ CREATE TABLE IF NOT EXISTS portal_zugang (
     benutzt TEXT NOT NULL DEFAULT ''
 );
 
+CREATE TABLE IF NOT EXISTS umlauf (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gemeinschaft_id INTEGER NOT NULL REFERENCES gemeinschaft(id),
+    titel TEXT NOT NULL,
+    antrag TEXT NOT NULL,                                 -- Wortlaut des Beschlussantrags
+    mehrheit TEXT NOT NULL DEFAULT 'allstimmig',          -- allstimmig (§ 23 Abs. 3 S. 1) | einfach (nach Beschluss § 23 Abs. 3 S. 2)
+    ermaechtigung TEXT NOT NULL DEFAULT '',               -- Beschluss, der die einfache Mehrheit für diesen Gegenstand zulässt
+    frist TEXT NOT NULL,                                  -- Stimmabgabe bis
+    status TEXT NOT NULL DEFAULT 'entwurf',               -- entwurf | laeuft | beendet
+    gestartet TEXT NOT NULL DEFAULT '',
+    beendet TEXT NOT NULL DEFAULT '',
+    ergebnis TEXT NOT NULL DEFAULT '',                    -- angenommen | abgelehnt
+    beschluss_id INTEGER REFERENCES beschluss(id)
+);
+
+CREATE TABLE IF NOT EXISTS umlauf_stimme (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    umlauf_id INTEGER NOT NULL REFERENCES umlauf(id),
+    person_id INTEGER NOT NULL REFERENCES person(id),
+    stimme TEXT NOT NULL,                                 -- ja | nein | enthaltung
+    zeit TEXT NOT NULL,
+    weg TEXT NOT NULL DEFAULT 'portal',                   -- portal | email | post (Erklärung in Textform)
+    UNIQUE (umlauf_id, person_id)
+);
+
+CREATE TABLE IF NOT EXISTS dokument (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    gemeinschaft_id INTEGER NOT NULL REFERENCES gemeinschaft(id),
+    titel TEXT NOT NULL,
+    kategorie TEXT NOT NULL DEFAULT 'sonstiges',
+    datum TEXT NOT NULL DEFAULT '',
+    datei TEXT NOT NULL,
+    name TEXT NOT NULL,
+    mime TEXT NOT NULL,
+    groesse INTEGER NOT NULL,
+    portal INTEGER NOT NULL DEFAULT 0,                    -- im Eigentümerportal sichtbar
+    hochgeladen TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS ki_protokoll (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     zeit TEXT NOT NULL,
@@ -391,6 +430,8 @@ NACHTRAEGE = [
     ("kostenart", "datev_konto", "TEXT NOT NULL DEFAULT ''"),      # Sachkonto für den DATEV-Export
     ("konto", "datev_konto", "TEXT NOT NULL DEFAULT ''"),          # Finanzkonto (Bank) für den DATEV-Export
     ("vorgang", "auftrag_id", "INTEGER"),
+    ("notfallregel", "dienstleister_id", "INTEGER REFERENCES dienstleister(id)"),   # Notdienst-Nummer kommt vom Dienstleister
+    ("gemeinschaft", "zustimmung_12", "INTEGER NOT NULL DEFAULT 0"),               # Veräußerung braucht Verwalterzustimmung (§ 12 WEG)
 ]
 
 # Vorbelegung § 35a für Kostenarten, die vor dieser Funktion angelegt wurden (Name → Einordnung, Lohnanteil %)
@@ -457,6 +498,7 @@ DEFAULTS = {
     "datev_berater": "", "datev_mandant": "", "datev_erloes_hausgeld": "8000", "datev_erloes_umlage": "8010",
     "datev_konto_sonstig": "1590", "datev_kosten_standard": "4900",
     "portal_aktiv": "1", "portal_belege": "0",
+    "mahn_frist_tage": "14", "mahn_schwelle_cent": "500", "mahn_gebuehr_1": "0", "mahn_gebuehr_2": "500", "mahn_gebuehr_3": "1000",
 }
 
 

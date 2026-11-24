@@ -424,3 +424,59 @@ def auftrag(g, a, d, einheit, kontakt):
                                "Maschinenkosten getrennt vom Material aus (Bescheinigung nach § 35a EStG für die Eigentümer). "
                                "Mehrkosten über den Auftragswert hinaus bitte vorher mit uns abstimmen."), S["text"]))
     return _bauen(story + _gruss(), f"Auftrag {a['nr']}")
+
+
+# ------------------------------------------------------------------ Verkauf einer Einheit
+def verkauf_auskunft(d):
+    g, e = d["g"], d["einheit"]
+    story = _kopf(g, f"Verwalterauskunft zur Einheit {e['nr']}", f"Stand {d['stichtag']:%d.%m.%Y} · {g['strasse']}, {g['plz']} {g['ort']} · "
+                                                                f"{e['lage'] or ''} · MEA {e['mea']:g} · {e['wohnflaeche']:g} m²")
+    verk = ", ".join(" ".join(x for x in (p.get("vorname"), p.get("nachname")) if x) or p.get("firma", "") for p in d["verkaeufer"])
+    story.append(Paragraph(esc(f"Eigentümer laut Verwaltungsunterlagen: {verk or '–'}. Die Auskunft wird mit Einverständnis des Eigentümers erteilt."), S["text"]))
+    story.append(Paragraph("Hausgeld und Rückstände", S["h2"]))
+    zeilen = [["", ""], ["Hausgeld monatlich laut Wirtschaftsplan", eur(d["monat"]) if d["monat"] is not None else "kein Wirtschaftsplan"]]
+    zeilen += [[esc(p["text"]) + f" (fällig {_datum(p['faellig'])})", eur(p["betrag"])] for p in d["posten"]]
+    zeilen.append(["Rückstände gesamt", eur(sum(p["betrag"] for p in d["posten"]))])
+    story.append(_tabelle(zeilen, [130 * mm, 40 * mm], summenzeile=True))
+    if d["kuenftig"]:
+        story.append(Paragraph("Beschlossene, noch nicht fällige Sonderumlagen", S["h2"]))
+        story.append(_tabelle([["Sonderumlage", "fällig", "Anteil der Einheit"]] +
+                              [[esc(k["titel"]), _datum(k["faellig"]), eur(k["anteil"])] for k in d["kuenftig"]], [90 * mm, 40 * mm, 40 * mm]))
+    story.append(Paragraph("Erhaltungsrücklage", S["h2"]))
+    story.append(Paragraph(esc(f"Stand der Rücklagenkonten: {eur(d['ruecklage'])}; rechnerisch auf die Einheit entfallend (MEA): "
+                               f"{eur(d['ruecklage_anteil'])}. Die Rücklage ist Vermögen der Gemeinschaft und wird beim Verkauf nicht ausgezahlt."),
+                           S["text"]))
+    story.append(Paragraph("Beschlüsse der letzten drei Jahre", S["h2"]))
+    if d["beschluesse"]:
+        story.append(_tabelle([["Nr.", "Datum", "Beschluss", "Ergebnis"]] +
+                              [[str(b["lfd"]), _datum(b["datum"]), Paragraph(esc(b["text"]), S["klein"]), Paragraph(esc(b["ergebnis"]), S["klein"])]
+                               for b in d["beschluesse"]], [12 * mm, 22 * mm, 96 * mm, 40 * mm], rechts_ab=None))
+    else:
+        story.append(Paragraph("Keine.", S["text"]))
+    if d["umlaeufe"]:
+        story.append(Spacer(1, 2 * mm))
+        story.append(Paragraph(esc("Laufende Umlaufverfahren: " + "; ".join(u["titel"] for u in d["umlaeufe"])), S["text"]))
+    story.append(Spacer(1, 4 * mm))
+    story.append(Paragraph("Ab Eintragung im Grundbuch schuldet der Erwerber das Hausgeld und die danach fällig werdenden Beträge; "
+                           "Rückstände des Veräußerers gehen nicht auf ihn über. Nach § 18 Abs. 4 WEG kann die Beschluss-Sammlung "
+                           "eingesehen werden.", S["klein"]))
+    return _bauen(story + _gruss(), f"Verwalterauskunft {e['nr']}")
+
+
+def verkauf_zustimmung(d, kaeufer, urkunde):
+    g, e = d["g"], d["einheit"]
+    verk = ", ".join(" ".join(x for x in (p.get("vorname"), p.get("nachname")) if x) or p.get("firma", "") for p in d["verkaeufer"])
+    story = _kopf(g, "Zustimmung zur Veräußerung (§ 12 WEG)")
+    story.append(Paragraph(esc(
+        f"Als Verwalterin der Gemeinschaft der Wohnungseigentümer {g['name']}, {g['strasse']}, {g['plz']} {g['ort']}, stimmt "
+        f"{db.setting('verwaltung_name')} der Veräußerung des Wohnungseigentums Nr. {e['nr']} ({e['lage'] or ''}, "
+        f"{e['mea']:g}/{d['mea_summe']:g} Miteigentumsanteile) "
+        f"durch {verk or '________________'} an {kaeufer or '________________'} zu"
+        + (f", beurkundet unter {urkunde}" if urkunde else "") + "."), S["text"]))
+    story.append(Spacer(1, 4 * mm))
+    story.append(Paragraph("Die Zustimmung wird gemäß der Gemeinschaftsordnung erteilt. Für das Grundbuchamt ist die Unterschrift "
+                           "öffentlich zu beglaubigen; die Verwaltereigenschaft wird durch die Niederschrift über den "
+                           "Bestellungsbeschluss mit öffentlich beglaubigten Unterschriften nachgewiesen (§ 26 Abs. 4 WEG).", S["text"]))
+    story.append(Spacer(1, 22 * mm))
+    story.append(_tabelle([["", ""], ["Ort, Datum", f"Unterschrift für {db.setting('verwaltung_name')}"]], [70 * mm, 100 * mm], rechts_ab=None))
+    return _bauen(story, f"Zustimmung § 12 {e['nr']}")

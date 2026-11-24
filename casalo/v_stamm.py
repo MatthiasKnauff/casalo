@@ -94,10 +94,10 @@ def gemeinschaft_speichern(gid):
     grund = min(50, max(30, f_int("heiz_grundanteil", 30)))
     prinzip = f("stimmprinzip") if f("stimmprinzip") in ("kopf", "mea", "objekt") else "kopf"
     db.ex("UPDATE gemeinschaft SET nr = ?, name = ?, strasse = ?, plz = ?, ort = ?, heizkosten_modus = ?, "
-          "heiz_grundanteil = ?, stimmprinzip = ?, hybrid_erlaubt = ?, glaeubiger_id = ?, verwalter_seit = ?, notiz = ? "
-          "WHERE id = ?", (f("nr"), f("name"), f("strasse"), f("plz"), f("ort"), modus, grund, prinzip,
-                           1 if request.form.get("hybrid_erlaubt") else 0, f("glaeubiger_id").upper(),
-                           f("verwalter_seit"), f("notiz"), gid))
+          "heiz_grundanteil = ?, stimmprinzip = ?, hybrid_erlaubt = ?, glaeubiger_id = ?, verwalter_seit = ?, notiz = ?, "
+          "zustimmung_12 = ? WHERE id = ?", (f("nr"), f("name"), f("strasse"), f("plz"), f("ort"), modus, grund, prinzip,
+                                             1 if request.form.get("hybrid_erlaubt") else 0, f("glaeubiger_id").upper(),
+                                             f("verwalter_seit"), f("notiz"), 1 if request.form.get("zustimmung_12") else 0, gid))
     flash("Gespeichert.", "ok")
     return redirect(f"/g/{gid}?tab=einstellungen")
 

@@ -188,7 +188,7 @@ def mahnwesen(gid):
     zeilen = []
     for e in daten.einheiten(gid):
         v = forderungen.mahnvorschlag(e["id"], heute)
-        if v["summe"] <= 0 and not v["letzte"]:
+        if v["summe"] <= 0 and not v["letzte"] and not v["vorbesitzer"]:
             continue
         zeilen.append({"einheit": e, "eigentuemer": daten.eigentuemer_text(e["id"]), **v})
     verlauf = db.q("SELECT m.*, e.nr AS e_nr, p.vorname, p.nachname, p.firma FROM mahnung m JOIN einheit e ON e.id = m.einheit_id "
@@ -304,3 +304,46 @@ def steuer35a_alle_pdf(gid, jahr):
     liste = [(e, p, b["einheiten"].get(e["id"], leer)) for e, p in _empfaenger_liste(gid)
              if not nur_post or empfaenger_weg(p) == "post"]
     return _pdf(pdf.bescheinigungen_35a_pdf(g, jahr, liste), f"Bescheinigungen-35a-{jahr}.pdf")
+
+
+# ------------------------------------------------------------------ Verkauf einer Einheit
+def verkauf_daten(eid, stichtag=None):
+    """Auskunft für Verkauf: Hausgeld, Rückstände, Sonderumlagen, rechnerischer Anteil an der Rücklage, jüngste Beschlüsse."""
+    stichtag = stichtag or datetime.date.today()
+    e = db.q("SELECT * FROM einheit WHERE id = ?", (eid,), one=True)
+    if not e:
+        abort(404)
+    gid = e["gemeinschaft_id"]
+    ein = daten.einheiten(gid)
+    mea_summe = sum(x["mea"] for x in ein) or 1
+    rl = sum(daten.konto_saldo(k, stichtag.isoformat()) for k in db.q("SELECT * FROM konto WHERE gemeinschaft_id = ? AND art = 'ruecklage'", (gid,)))
+    wp = daten.wirtschaftsplan(gid, stichtag.year)
+    kuenftig = [{"titel": u["titel"], "faellig": u["faellig"], "anteil": forderungen.umlage_anteile(u).get(eid, 0)}
+                for u in db.q("SELECT * FROM sonderumlage WHERE gemeinschaft_id = ? AND faellig > ? ORDER BY faellig", (gid, stichtag.isoformat()))]
+    return {"einheit": dict(e), "g": daten.gemeinschaft(gid), "stichtag": stichtag,
+            "monat": wp["einheiten"][eid]["monat"] if wp["wp"] else None,
+            "posten": forderungen.offene_posten(eid, stichtag), "kuenftig": kuenftig,
+            "ruecklage": rl, "ruecklage_anteil": round(rl * e["mea"] / mea_summe), "mea_summe": mea_summe,
+            "beschluesse": db.q("SELECT * FROM beschluss WHERE gemeinschaft_id = ? AND datum >= ? ORDER BY lfd DESC",
+                                (gid, (stichtag - datetime.timedelta(days=3 * 365)).isoformat())),
+            "umlaeufe": db.q("SELECT * FROM umlauf WHERE gemeinschaft_id = ? AND status = 'laeuft'", (gid,)),
+            "verkaeufer": daten.eigentuemer(eid)}
+
+
+@bp.route("/einheit/<int:eid>/verkauf", methods=["GET"])
+def verkauf(eid):
+    d = verkauf_daten(eid)
+    return render_template("verkauf.html", d=d, e=d["einheit"], g=d["g"])
+
+
+@bp.get("/einheit/<int:eid>/verkauf/<art>.pdf")
+def verkauf_pdf(eid, art):
+    d = verkauf_daten(eid)
+    if art == "auskunft":
+        return _pdf(pdf.verkauf_auskunft(d), f"Verwalterauskunft-{d['einheit']['nr']}.pdf")
+    if art == "zustimmung":
+        if not d["g"]["zustimmung_12"]:
+            abort(404)
+        return _pdf(pdf.verkauf_zustimmung(d, request.args.get("kaeufer", "").strip()[:300],
+                                           request.args.get("urkunde", "").strip()[:200]), f"Zustimmung-12-{d['einheit']['nr']}.pdf")
+    abort(404)

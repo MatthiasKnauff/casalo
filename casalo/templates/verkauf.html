@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block titel %}Verkauf {{ e.nr }}{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0"><a href="/g/{{ g.id }}">WEG {{ g.name }}</a></p>
+  <h1>Verkauf der Einheit {{ e.nr }}</h1><p class="unter">Auskunft für Käufer und Notar · Verwalterzustimmung · Eigentümerwechsel</p></div></div>
+<div class="raster">
+  <div class="kachel"><span class="klein muted">Hausgeld monatlich</span><b>{{ d.monat|eur if d.monat is not none else '–' }}</b></div>
+  <div class="kachel"><span class="klein muted">Rückstände</span><b class="{{ 'rot' if d.posten }}">{{ d.posten|sum(attribute='betrag')|eur }}</b></div>
+  <div class="kachel"><span class="klein muted">Rücklage (Anteil nach MEA)</span><b>{{ d.ruecklage_anteil|eur }}</b></div>
+  <div class="kachel"><span class="klein muted">künftige Sonderumlagen</span><b>{{ d.kuenftig|sum(attribute='anteil')|eur }}</b></div>
+</div>
+<div class="raster">
+<section class="karte"><h2>1. Verwalterauskunft</h2>
+  <p>Hausgeld, Rückstände, beschlossene Sonderumlagen, Rücklage und Beschlüsse der letzten drei Jahre – für Käufer oder Notar.</p>
+  <p class="hinweis warnung">Nur mit Einverständnis des Verkäufers herausgeben.</p>
+  <p><a class="knopf" href="/einheit/{{ e.id }}/verkauf/auskunft.pdf" target="_blank">Auskunft (PDF)</a></p></section>
+<section class="karte"><h2>2. Zustimmung nach § 12 WEG</h2>
+  {% if g.zustimmung_12 %}
+  <form action="/einheit/{{ e.id }}/verkauf/zustimmung.pdf" target="_blank">
+    <label>Käufer</label><input name="kaeufer" placeholder="Name(n), Geburtsdatum, Anschrift">
+    <label>Kaufvertrag</label><input name="urkunde" placeholder="UR-Nr. … des Notars …">
+    <p><button>Zustimmung (PDF)</button></p></form>
+  <p class="hinweis">Unterschrift beim Notar beglaubigen lassen; dazu die Niederschrift über die Verwalterbestellung mit beglaubigten Unterschriften (§ 26 Abs. 4 WEG).</p>
+  {% else %}<p class="muted">Laut Einstellungen der Gemeinschaft ist keine Zustimmung nötig. Falls die Gemeinschaftsordnung sie verlangt: <a href="/g/{{ g.id }}?tab=einstellungen">dort ankreuzen</a>.</p>{% endif %}
+</section>
+<section class="karte"><h2>3. Eigentümerwechsel eintragen</h2>
+  <p>Wenn die Eintragung im Grundbuch vorliegt: unter <a href="/g/{{ g.id }}">Einheiten &amp; Eigentümer</a> → „Eigentümer zuordnen“ mit „Wechsel“ und dem Datum der Eintragung.
+  Bisherige Eigentümer enden am Vortag; Lastschrift und Portal gehen ab dann an den neuen Eigentümer.</p>
+  <p class="hinweis">Rückstände des Verkäufers bleiben seine Schuld; die Jahresabrechnung geht an den, der beim Beschluss Eigentümer ist.</p></section>
+</div>
+{% endblock %}

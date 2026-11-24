@@ -50,6 +50,8 @@
   <a class="nav sub {{ 'an' if p.startswith(gp ~ '/auftraege') or p.startswith('/auftrag/') }}" href="{{ gp }}/auftraege">Aufträge</a>
   <a class="nav sub {{ 'an' if p.startswith(gp ~ '/wartung') }}" href="{{ gp }}/wartung">Wartung</a>
   <a class="nav sub {{ 'an' if p.startswith(gp ~ '/belege') }}" href="{{ gp }}/belege">Belege</a>
+  <a class="nav sub {{ 'an' if p.startswith(gp ~ '/dokumente') }}" href="{{ gp }}/dokumente">Dokumente</a>
+  <a class="nav sub {{ 'an' if p.startswith(gp ~ '/umlauf') or p.startswith('/umlauf/') }}" href="{{ gp }}/umlauf">Umlaufbeschlüsse</a>
   <a class="nav sub {{ 'an' if p == gp and request.args.get('tab') in ('konten','kostenarten','beschluesse','vorgaenge','einstellungen','finanzen') }}" href="{{ gp }}?tab=konten">Konten, Beschlüsse …</a>
   {% if g_aktuell.assistent %}<a class="nav sub hinweis-nav" href="/assistent/{{ g_aktuell.id }}/{{ g_aktuell.assistent }}">Einrichtung fortsetzen</a>{% endif %}
   <div class="trenner"></div>
