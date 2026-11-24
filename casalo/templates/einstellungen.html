@@ -25,7 +25,7 @@
 </form>
 <section class="karte"><h2>Benutzer</h2>
   <table>{% for u in benutzerliste %}<tr><td>{{ u.name }}</td><td class="muted">{{ u.email }}</td><td>{{ 'Admin' if u.rolle == 'admin' else 'Mitarbeiter' }}</td>
-    <td>{% if u.id != benutzer.id %}<form method="post" action="/benutzer/{{ u.id }}/loeschen"><button class="klein gefahr" aria-label="Löschen">✕</button></form>{% endif %}</td></tr>{% endfor %}</table>
+    <td>{% if u.id != benutzer.id %}<form method="post" action="/benutzer/{{ u.id }}/loeschen" data-frage="Benutzer {{ u.name }} löschen?" data-ok="Löschen"><button class="klein gefahr" aria-label="Löschen">✕</button></form>{% endif %}</td></tr>{% endfor %}</table>
   <form method="post"><input type="hidden" name="bereich" value="benutzer">
     <div class="felder"><div><label>Name</label><input name="name"></div><div><label>E-Mail</label><input name="email" type="email"></div>
       <div><label>Passwort</label><input name="passwort" type="password" autocomplete="new-password"></div>

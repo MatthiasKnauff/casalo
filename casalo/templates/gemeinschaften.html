@@ -4,19 +4,21 @@
 <div class="kopf"><div><h1>Gemeinschaften</h1><p class="unter">Wohnungseigentümergemeinschaften in der Verwaltung</p></div></div>
 <section class="karte eng">
   {% if gemeinschaften %}
-  <div class="scroll"><table>
+  <div class="scroll"><table class="tab" data-tab="gemeinschaften">
     <tr><th>Nr.</th><th>Gemeinschaft</th><th>Ort</th><th class="zahl">Einheiten</th><th class="zahl">MEA</th><th>Heizkosten</th></tr>
     {% for g in gemeinschaften %}
     <tr><td class="muted">{{ g.nr }}</td><td><a href="/g/{{ g.id }}"><b>{{ g.name }}</b></a></td><td>{{ g.plz }} {{ g.ort }}</td>
         <td class="zahl">{{ g.n_einheiten }}</td>
         <td class="zahl">{{ g.summe_mea|zahl }}</td>
-        <td>{{ 'Messdienst' if g.heizkosten_modus == 'messdienst' else 'selbst (HeizkostenV)' }}</td></tr>
+        <td>{{ 'Messdienst' if g.heizkosten_modus == 'messdienst' else 'selbst (HeizkostenV)' }}{% if g.assistent %} <a class="chip warnung" href="/assistent/{{ g.id }}/{{ g.assistent }}">Einrichtung offen</a>{% endif %}</td></tr>
     {% endfor %}
   </table></div>
   {% else %}<p class="leer">Noch keine Gemeinschaft angelegt.</p>{% endif %}
 </section>
 <section class="karte">
-  <h2>Neue Gemeinschaft</h2>
+  <div class="zeile"><h2 style="margin:0">Neue Gemeinschaft</h2><a class="knopf rechts" href="/assistent">Mit dem Assistenten einrichten</a></div>
+  <p class="hinweis">Der Assistent führt durch Einheiten, Eigentümer, Konten und Wirtschaftsplan – jederzeit unterbrechbar.</p>
+  <details class="form"><summary>Nur schnell anlegen, ohne Assistent</summary>
   <form method="post">
     <div class="felder">
       <div><label for="nr">Nr.</label><input id="nr" name="nr" placeholder="WEG 03"></div>
@@ -26,7 +28,8 @@
       <div><label for="ort">Ort</label><input id="ort" name="ort"></div>
     </div>
     <p class="hinweis">Die üblichen Kostenarten mit Verteilerschlüssel werden gleich mit angelegt und lassen sich danach ändern.</p>
-    <p><button>Anlegen</button></p>
+    <p><button class="zweit">Anlegen</button></p>
   </form>
+  </details>
 </section>
 {% endblock %}

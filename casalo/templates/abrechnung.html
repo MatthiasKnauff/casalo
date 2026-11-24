@@ -38,10 +38,10 @@
 </table></section>
 </div>
 
-<section class="karte eng" style="margin-top:18px"><h2 class="zeile">Einzelabrechnungen <a class="rechts klein" href="/g/{{ g.id }}/abrechnung/{{ jahr }}/post.pdf" target="_blank">Für den Postversand (PDF)</a></h2><div class="scroll"><table>
+<section class="karte eng" style="margin-top:18px"><h2 class="zeile">Einzelabrechnungen <a class="rechts klein" href="/g/{{ g.id }}/abrechnung/{{ jahr }}/post.pdf" target="_blank">Für den Postversand (PDF)</a></h2><div class="scroll"><table class="tab" data-tab="einzelabrechnungen">
   <tr><th>Einheit</th><th>Eigentümer</th><th class="zahl">Kosten</th><th class="zahl">Rücklage</th><th class="zahl">Vorschüsse</th><th class="zahl">Nachschuss / Guthaben</th><th class="zahl">Rückstand {{ jahr }}</th><th></th></tr>
   {% for e in einheiten %}{% set d = a.einheiten[e.id] %}
-  <tr><td><b>{{ e.nr }}</b></td><td>{{ e.eigentuemer }}</td><td class="zahl">{{ d.summe_kosten|eur }}</td><td class="zahl">{{ d.ruecklage|eur }}</td>
+  <tr data-karte="/karte/einheit/{{ e.id }}"><td><b>{{ e.nr }}</b></td><td>{{ e.eigentuemer }}</td><td class="zahl">{{ d.summe_kosten|eur }}</td><td class="zahl">{{ d.ruecklage|eur }}</td>
       <td class="zahl">{{ d.vorschuss_soll|eur }}</td>
       <td class="zahl {{ 'rot' if d.spitze > 0 else 'gruen' if d.spitze < 0 }}">{{ d.spitze|eur }}</td>
       <td class="zahl {{ 'rot' if d.rueckstand > 0 }}">{{ d.rueckstand|eur if d.rueckstand > 0 else '–' }}</td>

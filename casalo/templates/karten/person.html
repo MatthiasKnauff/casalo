@@ -1,0 +1,19 @@
+{% with art='Eigentümer', titel=(p.firma or ((p.vorname ~ ' ' ~ p.nachname).strip())), seite='/person/' ~ p.id %}{% include "karten/_kopf.html" %}{% endwith %}
+<table class="kv-tab">
+  {% for feld in ['anrede','vorname','nachname','firma','strasse','plz','ort','email','telefon','telefon2'] %}
+  <tr><th>{{ {'anrede':'Anrede','vorname':'Vorname','nachname':'Nachname','firma':'Firma','strasse':'Straße','plz':'PLZ','ort':'Ort','email':'E-Mail','telefon':'Telefon','telefon2':'Telefon 2'}[feld] }}</th>{{ zelle('person', p, feld) }}</tr>
+  {% endfor %}
+</table>
+<h3>Versand und Hausgeld</h3>
+<table class="kv-tab">
+  <tr><th>Versand</th>{{ zelle('person', p, 'versand') }}</tr>
+  <tr><th>IBAN</th>{{ zelle('person', p, 'iban') }}</tr>
+  <tr><th>Mandat</th>{{ zelle('person', p, 'mandat_ref') }}</tr>
+  <tr><th>Mandat vom</th>{{ zelle('person', p, 'mandat_datum') }}</tr>
+  <tr><th>Hausgeld</th>{{ zelle('person', p, 'zahlweise') }}</tr>
+</table>
+{% if p.versand != 'post' and not p.email %}<p class="hinweis rot">Keine E-Mail-Adresse – Post wird verwendet.</p>{% endif %}
+<h3>Einheiten</h3>
+<ul class="karte-liste">{% for t in einheiten %}<li class="{{ 'muted' if t.bis }}"><a href="#" hx-get="/karte/einheit/{{ t.einheit_id }}" hx-target="#rechts-inhalt">{{ t.nr }}</a> · <a href="/g/{{ t.gid }}">{{ t.g_name }}</a>{% if t.bis %} <span class="klein">bis {{ t.bis|datum }}</span>{% endif %}</li>{% else %}<li class="muted">keine</li>{% endfor %}</ul>
+{% if vorgaenge %}<h3>Vorgänge</h3><ul class="karte-liste">{% for v in vorgaenge %}<li><a href="#" hx-get="/karte/vorgang/{{ v.id }}" hx-target="#rechts-inhalt">{{ v.titel }}</a> <span class="chip {{ 'ok' if v.status == 'erledigt' else 'warnung' }}">{{ v.status }}</span></li>{% endfor %}</ul>{% endif %}
+{% if anrufe %}<h3>Anrufe</h3><ul class="karte-liste">{% for a in anrufe %}<li><a href="#" hx-get="/karte/anruf/{{ a.id }}" hx-target="#rechts-inhalt">{{ a.beginn|datum }}</a> · {{ a.anliegen or a.status }}</li>{% endfor %}</ul>{% endif %}

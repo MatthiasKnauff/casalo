@@ -1,0 +1,2 @@
+{% with art='Anruf', titel=a.beginn|datum, unter=(a.firma or ((a.vorname or '') ~ ' ' ~ (a.nachname or '')).strip() or a.nummer or 'unbekannt'), seite='/anruf/' ~ a.id %}{% include "karten/_kopf.html" %}{% endwith %}
+<div class="gespraech">{% for z in verlauf %}<div class="blase {{ 'ki' if z.wer == 'ki' else 'mensch' }}"><span class="wer">{{ 'KI' if z.wer == 'ki' else 'Anrufer' }}</span>{{ z.text }}</div>{% else %}<p class="muted">Kein Verlauf.</p>{% endfor %}</div>

@@ -25,7 +25,7 @@ def create_app(test_config=None):
     with app.app_context():
         db.telefon_token()                      # Schlüssel-Datei für den Telefon-Container bereitstellen
 
-    from . import web, v_start, v_stamm, v_finanzen, v_versammlung, v_bank, v_telefon  # noqa: F401  (Routen)
+    from . import web, v_start, v_stamm, v_finanzen, v_versammlung, v_bank, v_telefon, v_komfort, v_assistent  # noqa: F401  (Routen)
     app.register_blueprint(web.bp)
 
     @app.context_processor
@@ -37,6 +37,8 @@ def create_app(test_config=None):
             "benutzer": web.aktueller_benutzer(),
             "verwaltung": db.setting("verwaltung_name"),
             "SCHLUESSEL": rechnen.SCHLUESSEL,
+            "heute_jahr": datetime.date.today().year,
+            **v_komfort.kontext(),
         }
 
     @app.template_filter("eur")

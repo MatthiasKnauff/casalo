@@ -19,48 +19,38 @@
 </nav>
 
 {% if tab == 'einheiten' %}
+{% if g.assistent %}<div class="meldung warnung">Die Einrichtung ist noch nicht abgeschlossen – <a href="/assistent/{{ g.id }}/{{ g.assistent }}">mit dem Assistenten weitermachen</a>.</div>{% endif %}
 <section class="karte eng">
-  <div class="scroll"><table>
-    <tr><th>Nr.</th><th>Lage</th><th>Art</th><th class="zahl">Fläche</th><th class="zahl">MEA</th><th>Eigentümer</th><th class="zahl">Hausgeld mtl.</th><th class="zahl">offen {{ jahr }}</th><th></th></tr>
+  <p class="hinweis" style="padding:0 12px">Felder anklicken und direkt bearbeiten · Zeile anklicken für Details rechts · rechte Maustaste für mehr.</p>
+  <div class="scroll"><table class="tab" data-tab="einheiten">
+    <thead><tr><th>Nr.</th><th>Lage</th><th>Art</th><th class="zahl">Fläche</th><th class="zahl">MEA</th><th>Eigentümer</th><th class="zahl">Hausgeld mtl.</th><th class="zahl">offen {{ jahr }}</th><th data-nosort data-name="Aktionen"></th></tr></thead>
+    <tbody>
     {% for e in einheiten %}
-    <tr>
-      <td><b>{{ e.nr }}</b></td><td>{{ e.lage }}</td><td>{{ e.art }}</td>
-      <td class="zahl">{{ e.wohnflaeche|zahl }} m²</td><td class="zahl">{{ e.mea|zahl }}</td>
-      <td>{% for p in e.eigentuemer %}<a href="/person/{{ p.id }}">{{ p.firma or (p.nachname ~ ', ' ~ p.vorname) }}</a>{% if p.zahlweise == 'lastschrift' %} <span class="chip info">Lastschrift</span>{% endif %}<br>{% else %}<span class="rot">kein Eigentümer</span>{% endfor %}</td>
-      <td class="zahl">{{ e.monat|eur if e.monat is not none else '–' }}</td>
-      <td class="zahl {{ 'rot' if e.offen and e.offen > 0 }}">{{ e.offen|eur if e.offen is not none else '–' }}</td>
+    <tr data-karte="/karte/einheit/{{ e.id }}">
+      {{ zelle('einheit', e, 'nr', 'fett') }}{{ zelle('einheit', e, 'lage') }}{{ zelle('einheit', e, 'art') }}{{ zelle('einheit', e, 'wohnflaeche') }}{{ zelle('einheit', e, 'mea') }}
+      <td>{% for p in e.eigentuemer %}<a href="/person/{{ p.id }}" hx-get="/karte/person/{{ p.id }}" hx-target="#rechts-inhalt" hx-on::before-request="Casalo.rechtsAuf(true)">{{ p.firma or (p.nachname ~ ', ' ~ p.vorname) }}</a>{% if p.zahlweise == 'lastschrift' %} <span class="chip info">Lastschrift</span>{% endif %}<br>{% else %}<span class="rot">kein Eigentümer</span>{% endfor %}</td>
+      <td class="zahl" data-sort="{{ e.monat or 0 }}">{{ e.monat|eur if e.monat is not none else '–' }}</td>
+      <td class="zahl {{ 'rot' if e.offen and e.offen > 0 }}" data-sort="{{ e.offen or 0 }}">{{ e.offen|eur if e.offen is not none else '–' }}</td>
       <td>
-        <details class="form"><summary>bearbeiten</summary>
-          <form method="post" action="/g/{{ g.id }}/einheit">
-            <input type="hidden" name="id" value="{{ e.id }}">
-            <div class="felder">
-              <div><label>Nr.</label><input name="nr" value="{{ e.nr }}"></div>
-              <div><label>Lage</label><input name="lage" value="{{ e.lage }}"></div>
-              <div><label>Art</label><select name="art">{% for a in ['Wohnung','Gewerbe','Stellplatz','Sonstiges'] %}<option {{ 'selected' if e.art == a }}>{{ a }}</option>{% endfor %}</select></div>
-              <div><label>Wohnfläche m²</label><input name="wohnflaeche" value="{{ e.wohnflaeche|zahl }}"></div>
-              <div><label>MEA</label><input name="mea" value="{{ e.mea|zahl }}"></div>
-            </div>
-            <p class="zeile"><button class="klein">Speichern</button></p>
-          </form>
+        <details class="form aktionen"><summary aria-label="Eigentümerwechsel, Löschen" title="Eigentümerwechsel, Löschen">⋯</summary>
           <form method="post" action="/g/{{ g.id }}/eigentuemer">
-            <input type="hidden" name="einheit_id" value="{{ e.id }}">
-            <h3>Eigentümerwechsel</h3>
+            <input type="hidden" name="einheit_id" value="{{ e.id }}"><input type="hidden" name="wechsel" value="1">
             <div class="felder">
               <div><label>Neuer Eigentümer (vorhanden)</label><select name="person_id"><option value="">– neu anlegen –</option>{% for p in personen %}<option value="{{ p.id }}">{{ p.firma or (p.nachname ~ ', ' ~ p.vorname) }}</option>{% endfor %}</select></div>
               <div><label>Nachname</label><input name="nachname"></div>
               <div><label>Vorname</label><input name="vorname"></div>
               <div><label>Übergang am</label><input type="date" name="von"></div>
             </div>
-            <input type="hidden" name="wechsel" value="1">
-            <p class="hinweis">Die bisherigen Eigentümer enden am Vortag. Weitere Angaben (Anschrift, E-Mail, Telefon, Lastschrift) danach auf der Seite des Eigentümers.</p>
+            <p class="hinweis">Die bisherigen Eigentümer enden am Vortag.</p>
             <p class="zeile"><button class="klein zweit">Wechsel eintragen</button></p>
           </form>
-          <form method="post" action="/g/{{ g.id }}/einheit/{{ e.id }}/loeschen"><button class="klein gefahr">Einheit löschen</button></form>
+          <form method="post" action="/g/{{ g.id }}/einheit/{{ e.id }}/loeschen" data-frage="Einheit {{ e.nr }} löschen?" data-ok="Löschen"><button class="klein gefahr">Einheit löschen</button></form>
         </details>
       </td>
     </tr>
-    {% else %}<tr><td colspan="9" class="leer">Noch keine Einheiten.</td></tr>{% endfor %}
+    {% else %}<tr><td colspan="9" class="leer">Noch keine Einheiten – am schnellsten mit dem <a href="/assistent/{{ g.id }}/2">Assistenten</a>.</td></tr>{% endfor %}
     {% if einheiten %}<tr class="summe"><td colspan="4">Summe</td><td class="zahl {{ 'rot' if summe_mea and (summe_mea|round(3)) not in (1000, 10000, 100000) }}">{{ summe_mea|zahl }}</td><td colspan="4"></td></tr>{% endif %}
+    </tbody>
   </table></div>
 </section>
 
@@ -111,35 +101,34 @@
 
 {% elif tab == 'konten' %}
 <section class="karte eng">
-  <div class="scroll"><table>
-    <tr><th>Art</th><th>Bank</th><th>IBAN</th><th>Zugang</th><th>Letzter Abruf</th><th class="zahl">Saldo heute</th><th></th></tr>
+  <div class="scroll"><table class="tab" data-tab="konten">
+    <thead><tr><th>Art</th><th>Bank</th><th>IBAN</th><th>Abruf</th><th>Letzter Abruf</th><th class="zahl">Saldo heute</th><th data-nosort data-name="Aktionen"></th></tr></thead>
+    <tbody>
     {% for k in konten %}
-    <tr><td>{{ 'Rücklage' if k.art == 'ruecklage' else 'Hausgeld' }}</td><td>{{ k.bank }}</td><td style="white-space:nowrap">{{ k.iban }}</td>
-        <td><span class="chip {{ 'ok' if k.zugang == 'fints' else 'info' }}">{{ {'fints':'FinTS','finapi':'finAPI','datei':'Datei-Import'}[k.zugang] }}</span></td>
-        <td class="muted">{{ k.letzter_abruf|datum }}</td><td class="zahl">{{ k.saldo|eur }}</td>
-        <td><details class="form"><summary>bearbeiten</summary>{% with k=k %}{% include "_konto_form.html" %}{% endwith %}</details></td></tr>
+    <tr data-karte="/karte/konto/{{ k.id }}">{{ zelle('konto', k, 'art') }}{{ zelle('konto', k, 'bank') }}{{ zelle('konto', k, 'iban') }}{{ zelle('konto', k, 'zugang') }}
+        <td class="muted">{{ k.letzter_abruf|datum }}</td><td class="zahl" data-sort="{{ k.saldo }}">{{ k.saldo|eur }}</td>
+        <td><details class="form aktionen"><summary aria-label="Zugang, Anfangssaldo" title="Zugang, Anfangssaldo">⋯</summary>{% with k=k %}{% include "_konto_form.html" %}{% endwith %}</details></td></tr>
     {% else %}<tr><td colspan="7" class="leer">Noch keine Konten.</td></tr>{% endfor %}
+    </tbody>
   </table></div>
 </section>
 <section class="karte"><h2>Neues Konto</h2>{% with k=None %}{% include "_konto_form.html" %}{% endwith %}</section>
 
 {% elif tab == 'kostenarten' %}
 <section class="karte eng">
-  <div class="scroll"><table>
-    <tr><th>#</th><th>Kostenart</th><th>Verteilerschlüssel</th><th>Stichworte für Bankumsätze</th><th></th></tr>
+  <div class="scroll"><table class="tab" data-tab="kostenarten">
+    <thead><tr><th class="zahl">#</th><th>Kostenart</th><th>Verteilerschlüssel</th><th>Stichworte für Bankumsätze</th><th data-nosort data-name="Aktionen"></th></tr></thead>
+    <tbody>
     {% for k in kostenarten %}
-    <tr>
-      <td style="width:70px"><input form="ka{{ k.id }}" name="reihenfolge" value="{{ k.reihenfolge }}" aria-label="Reihenfolge"></td>
-      <td><input form="ka{{ k.id }}" name="name" value="{{ k.name }}" aria-label="Name"></td>
-      <td><select form="ka{{ k.id }}" name="schluessel" aria-label="Schlüssel">{% for s, t in SCHLUESSEL.items() %}<option value="{{ s }}" {{ 'selected' if k.schluessel == s }}>{{ t }}</option>{% endfor %}</select>
-        {% if k.schluessel == 'verbrauch' %}<div class="klein"><a href="/g/{{ g.id }}/verbrauch/{{ k.id }}/{{ jahr - 1 }}">Verbrauch {{ jahr - 1 }} eintragen</a></div>{% endif %}
-        {% if k.schluessel == 'heizung' %}<div class="klein"><a href="/g/{{ g.id }}/heizkosten/{{ jahr - 1 }}">Heizkosten {{ jahr - 1 }}</a></div>{% endif %}</td>
-      <td><input form="ka{{ k.id }}" name="stichworte" value="{{ k.stichworte }}" aria-label="Stichworte"></td>
+    <tr data-karte="/karte/kostenart/{{ k.id }}">
+      {{ zelle('kostenart', k, 'reihenfolge') }}{{ zelle('kostenart', k, 'name') }}{{ zelle('kostenart', k, 'schluessel') }}{{ zelle('kostenart', k, 'stichworte') }}
       <td class="zeile">
-        <form id="ka{{ k.id }}" method="post" action="/g/{{ g.id }}/kostenart" class="inline"><input type="hidden" name="id" value="{{ k.id }}"><button class="klein zweit">Speichern</button></form>
-        <form method="post" action="/g/{{ g.id }}/kostenart/{{ k.id }}/loeschen" class="inline"><button class="klein gefahr" aria-label="Löschen">✕</button></form></td>
+        {% if k.schluessel == 'verbrauch' %}<a class="klein" href="/g/{{ g.id }}/verbrauch/{{ k.id }}/{{ jahr - 1 }}">Verbrauch {{ jahr - 1 }}</a>{% endif %}
+        {% if k.schluessel == 'heizung' %}<a class="klein" href="/g/{{ g.id }}/heizkosten/{{ jahr - 1 }}">Heizkosten {{ jahr - 1 }}</a>{% endif %}
+        <form method="post" action="/g/{{ g.id }}/kostenart/{{ k.id }}/loeschen" class="inline" data-frage="Kostenart „{{ k.name }}“ löschen?" data-ok="Löschen"><button class="klein gefahr" aria-label="Löschen">✕</button></form></td>
     </tr>
     {% endfor %}
+    </tbody>
   </table></div>
 </section>
 <section class="karte"><h2>Neue Kostenart</h2>
@@ -167,8 +156,8 @@
 {% elif tab == 'beschluesse' %}
 <section class="karte eng">
   <h2>Beschlusssammlung (§ 24 Abs. 7 WEG)</h2>
-  <div class="scroll"><table>
-    <tr><th>Nr.</th><th>Datum</th><th>Art</th><th>Wortlaut</th><th>Ergebnis</th><th>Vermerke</th></tr>
+  <div class="scroll"><table class="tab" data-tab="beschluesse">
+    <tr><th>Nr.</th><th>Datum</th><th>Art</th><th>Wortlaut</th><th>Ergebnis</th><th data-nosort>Vermerke</th></tr>
     {% for b in beschluesse %}
     <tr><td><b>{{ b.lfd }}</b></td><td style="white-space:nowrap">{{ b.datum|datum }}</td><td>{{ {'versammlung':'Versammlung','umlauf':'Umlaufbeschluss','urteil':'Urteil'}.get(b.art, b.art) }}</td>
         <td>{{ b.text }}</td><td>{{ b.ergebnis }}</td>
@@ -186,13 +175,14 @@
 </section>
 
 {% elif tab == 'vorgaenge' %}
-<section class="karte eng"><div class="scroll"><table>
-  <tr><th>Angelegt</th><th>Vorgang</th><th>Einheit</th><th>Quelle</th><th>Status</th></tr>
+<section class="karte eng"><div class="scroll"><table class="tab" data-tab="g-vorgaenge">
+  <thead><tr><th>Angelegt</th><th>Vorgang</th><th>Einheit</th><th>Quelle</th><th>Status</th></tr></thead>
+  <tbody>
   {% for v in vorgaenge %}
-  <tr><td class="muted" style="white-space:nowrap">{{ v.angelegt|datum }}</td><td>{% if v.notfallart %}<span class="chip fehler">Notfall</span> {% endif %}<b>{{ v.titel }}</b><div class="klein muted">{{ v.text }}</div></td>
-      <td>{{ v.e_nr or '' }}</td><td>{{ v.quelle }}</td>
-      <td><form method="post" action="/vorgang/{{ v.id }}/status"><input type="hidden" name="status" value="{{ 'offen' if v.status == 'erledigt' else 'erledigt' }}"><button class="klein zweit">{{ 'wieder öffnen' if v.status == 'erledigt' else 'erledigt' }}</button></form></td></tr>
+  <tr data-karte="/karte/vorgang/{{ v.id }}"><td class="muted" style="white-space:nowrap" data-sort="{{ v.angelegt }}">{{ v.angelegt|datum }}</td>
+      {{ zelle('vorgang', v, 'titel', 'fett') }}<td>{{ v.e_nr or '' }}</td><td>{{ 'Telefon' if v.quelle == 'telefon' else 'Büro' }}</td>{{ zelle('vorgang', v, 'status') }}</tr>
   {% else %}<tr><td colspan="5" class="leer">Keine Vorgänge.</td></tr>{% endfor %}
+  </tbody>
 </table></div></section>
 
 {% elif tab == 'einstellungen' %}

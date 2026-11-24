@@ -1,0 +1,9 @@
+{% with art='Kostenart', titel=k.name, seite='/g/' ~ k.gemeinschaft_id ~ '?tab=kostenarten' %}{% include "karten/_kopf.html" %}{% endwith %}
+<table class="kv-tab">
+  <tr><th>Name</th>{{ zelle('kostenart', k, 'name') }}</tr>
+  <tr><th>Schlüssel</th>{{ zelle('kostenart', k, 'schluessel') }}</tr>
+  <tr><th>Stichworte</th>{{ zelle('kostenart', k, 'stichworte') }}</tr>
+  <tr><th>Kosten bisher</th><td class="zahl">{{ ist|eur }}</td></tr>
+  <tr><th>Kosten Vorjahr</th><td class="zahl">{{ vorjahr|eur }}</td></tr>
+</table>
+<p class="hinweis">Die Stichworte helfen, Bankumsätze dieser Kostenart zuzuordnen.</p>

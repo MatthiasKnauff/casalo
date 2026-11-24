@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% set ohne_rechts = true %}
+{% block titel %}Für mich{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div><h1>Für mich: Darstellung</h1><p class="unter">Gilt nur für Sie, auf jedem Gerät, an dem Sie angemeldet sind.</p></div></div>
+<form method="post" class="karte" id="darst">
+  <h2>Farbe</h2>
+  <div class="knopf-wahl" role="radiogroup" aria-label="Farbe">
+    {% for k, (name, farbe, hell) in FARBEN.items() %}
+    <label class="kw farbe"><input type="radio" name="farbe" value="{{ k }}" {{ 'checked' if d.farbe == k }} data-a="{{ farbe }}" data-b="{{ hell }}">
+      <span><i style="background:{{ farbe }}"></i>{{ name }}</span></label>{% endfor %}
+  </div>
+  <h2 style="margin-top:20px">Schrift</h2>
+  <div class="knopf-wahl" role="radiogroup" aria-label="Schrift">
+    {% for k, (name, css) in SCHRIFTEN.items() %}
+    <label class="kw"><input type="radio" name="schrift" value="{{ k }}" {{ 'checked' if d.schrift == k }} data-css="{{ css }}"><span style="font-family:{{ css }}">{{ name }}</span></label>{% endfor %}
+  </div>
+  <h2 style="margin-top:20px">Schriftgröße</h2>
+  <div class="knopf-wahl" role="radiogroup" aria-label="Schriftgröße">
+    {% for g in GROESSEN %}<label class="kw"><input type="radio" name="groesse" value="{{ g }}" {{ 'checked' if d.groesse == g }}><span>{{ g }}</span></label>{% endfor %}
+  </div>
+  <h2 style="margin-top:20px">Abstände</h2>
+  <div class="knopf-wahl" role="radiogroup" aria-label="Abstände">
+    {% for k, name in DICHTE.items() %}<label class="kw"><input type="radio" name="dichte" value="{{ k }}" {{ 'checked' if d.dichte == k }}><span>{{ name }}</span></label>{% endfor %}
+  </div>
+  <p class="hinweis">Die Vorschau ändert sich sofort; gespeichert wird mit dem Knopf.</p>
+  <p class="zeile"><button>Speichern</button><a class="knopf zweit" href="/fuer-mich">Verwerfen</a></p>
+</form>
+<script>
+// Vorschau ohne Speichern
+document.getElementById('darst').addEventListener('change', (e) => {
+  const r = document.documentElement.style, i = e.target;
+  if (i.name === 'farbe') { r.setProperty('--accent', i.dataset.a); r.setProperty('--accent-bg', i.dataset.b); }
+  if (i.name === 'schrift') r.setProperty('--schrift', i.dataset.css);
+  if (i.name === 'groesse') r.setProperty('--gr', i.value + 'px');
+  if (i.name === 'dichte') document.documentElement.dataset.dichte = i.value;
+});
+</script>
+{% endblock %}

@@ -40,7 +40,7 @@
 <section class="karte eng"><h2>Einheiten</h2><table>
   <tr><th>Gemeinschaft</th><th>Einheit</th><th>von</th><th>bis</th><th></th></tr>
   {% for t in eigentum %}<tr><td><a href="/g/{{ t.gid }}">{{ t.g_name }}</a></td><td>{{ t.nr }} {{ t.lage }}</td><td>{{ t.von|datum }}</td><td>{{ t.bis|datum if t.bis else 'aktuell' }}</td>
-    <td><form method="post" action="/eigentum/{{ t.id }}/entfernen"><button class="klein gefahr">Zuordnung entfernen</button></form></td></tr>
+    <td><form method="post" action="/eigentum/{{ t.id }}/entfernen" data-frage="Zuordnung zu {{ t.nr }} entfernen?" data-ok="Entfernen"><button class="klein gefahr">Zuordnung entfernen</button></form></td></tr>
   {% else %}<tr><td colspan="5" class="leer">Keine.</td></tr>{% endfor %}
 </table></section>
 {% endblock %}

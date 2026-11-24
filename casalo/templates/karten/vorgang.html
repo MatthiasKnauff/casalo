@@ -1,0 +1,11 @@
+{% with art='Vorgang', titel=v.titel, unter=('WEG ' ~ g.name if g else '') ~ (' · ' ~ e.nr if e else ''), seite='/vorgaenge' %}{% include "karten/_kopf.html" %}{% endwith %}
+{% if v.notfallart %}<p><span class="chip fehler">Notfall: {{ v.notfallart }}</span></p>{% endif %}
+<table class="kv-tab">
+  <tr><th>Titel</th>{{ zelle('vorgang', v, 'titel') }}</tr>
+  <tr><th>Beschreibung</th>{{ zelle('vorgang', v, 'text') }}</tr>
+  <tr><th>Status</th>{{ zelle('vorgang', v, 'status') }}</tr>
+  <tr><th>Angelegt</th><td>{{ v.angelegt|datum }} · {{ 'KI-Telefon' if v.quelle == 'telefon' else 'Büro' }}</td></tr>
+  {% if v.rueckruf_bis %}<tr><th>Rückruf bis</th><td>{{ v.rueckruf_bis|datum }}{% if v.rueckruf_nummer %} · {{ v.rueckruf_nummer }}{% endif %}</td></tr>{% endif %}
+  {% if p %}<tr><th>Anrufer</th><td><a href="#" hx-get="/karte/person/{{ p.id }}" hx-target="#rechts-inhalt">{{ p.firma or (p.vorname ~ ' ' ~ p.nachname) }}</a></td></tr>{% endif %}
+</table>
+{% if anruf %}<p><a href="#" hx-get="/karte/anruf/{{ anruf.id }}" hx-target="#rechts-inhalt">Gespräch dazu ansehen</a></p>{% endif %}

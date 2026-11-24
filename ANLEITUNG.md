@@ -42,6 +42,23 @@ Erster Aufruf: Sie legen sich als Administrator an (Name, E-Mail, Passwort).
 6. Unter **Einstellungen der Gemeinschaft**: Heizkosten (Messdienst-Datei oder selbst nach HeizkostenV),
    Stimmrecht, Online-Teilnahme (wenn beschlossen), Gläubiger-ID für Lastschriften.
 
+## Bedienung
+
+- **Gemeinschaft oben wählen** – links erscheinen dann ihre Seiten (Einheiten, Buchungen, Wirtschaftsplan, Abrechnung …).
+- **Direkt in der Tabelle bearbeiten:** Feld anklicken, Enter speichert, Esc verwirft, Tab springt zum nächsten Feld.
+  Geprüft wird auf dem Server (z. B. IBAN, doppelte Nummern, Lastschrift nur mit Mandat).
+- **Rückgängig / Wiederholen:** oben rechts ↶ ↷ oder Strg+Z / Strg+Y, die Zahl daneben zeigt den Verlauf.
+- **Details rechts:** Zeile anklicken – Einheit, Eigentümer, Konto, Vorgang oder Anruf erscheinen rechts, auch dort bearbeitbar.
+- **Tabellen:** Spaltenkopf anklicken sortiert, rechte Maustaste auf den Kopf (oder ☰) blendet Spalten ein/aus und ordnet sie,
+  rechte Maustaste auf eine Zeile öffnet das Kontextmenü. Ab acht Zeilen gibt es ein Suchfeld.
+- **Assistent:** Gemeinschaften → „Mit dem Assistenten einrichten“: Gemeinschaft, Einheiten (auch als Serie, MEA aus der
+  Wohnfläche), Eigentümer, Konten, Wirtschaftsplan. Jeder Schritt speichert sofort; „Einrichtung fortsetzen“ führt zurück.
+- **Für mich (⚙):** Farbe, Schrift, Schriftgröße und Abstände – gilt nur für den eigenen Benutzer.
+
+Technik: Die Logik liegt vollständig auf dem Server (Python). Die Oberfläche ist HTML vom Server, nachgeladen mit
+htmx 2.0.4 (eine Datei, fest im Repo unter `casalo/static/vendor/`, keine Build-Kette) und kleinen eigenen Modulen
+in `casalo/static/js/` (Kern, Rückgängig, Tabellen, Bereich rechts).
+
 ## 3. Bank
 
 - **FinTS** (Standard): BLZ, FinTS-Adresse der Bank, Anmeldename und PIN beim Konto eintragen. Beim ersten Abruf

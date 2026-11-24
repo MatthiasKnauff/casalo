@@ -37,7 +37,7 @@
   <tr><th>Gilt für</th><th>Notfall</th><th>Was tun</th><th>Nummer</th><th>Ansage</th><th></th></tr>
   {% for r in regeln %}
   <tr><td>{{ r.g_name or 'alle Gemeinschaften' }}</td><td>{{ NOTFALLARTEN[r.notfallart] }}</td><td>{{ AKTIONEN[r.aktion] }}</td><td>{{ r.nummer }}</td><td class="klein">{{ r.ansage }}</td>
-    <td><form method="post"><input type="hidden" name="bereich" value="regel_loeschen"><input type="hidden" name="id" value="{{ r.id }}"><button class="klein gefahr" aria-label="Löschen">✕</button></form></td></tr>
+    <td><form method="post" data-frage="Regel löschen?" data-ok="Löschen"><input type="hidden" name="bereich" value="regel_loeschen"><input type="hidden" name="id" value="{{ r.id }}"><button class="klein gefahr" aria-label="Löschen">✕</button></form></td></tr>
   {% else %}<tr><td colspan="6" class="leer">Noch keine Regeln – Notfälle werden nur aufgenommen.</td></tr>{% endfor %}
   </table></div>
   <form method="post" style="padding:0 12px 12px"><input type="hidden" name="bereich" value="regel">

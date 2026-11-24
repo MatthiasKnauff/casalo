@@ -275,11 +275,22 @@ def connect(path=None):
     return con
 
 
+# Spalten, die nach der ersten Version dazukamen: (Tabelle, Spalte, Definition)
+NACHTRAEGE = [
+    ("benutzer", "darstellung", "TEXT NOT NULL DEFAULT '{}'"),
+    ("gemeinschaft", "assistent", "INTEGER NOT NULL DEFAULT 0"),   # 0 = fertig, sonst offener Schritt des Assistenten
+]
+
+
 def init():
     os.makedirs(data_dir(), exist_ok=True)
     with _lock:
         con = connect()
         con.executescript(SCHEMA)
+        for tabelle, spalte, definition in NACHTRAEGE:
+            vorhanden = {r["name"] for r in con.execute(f"PRAGMA table_info({tabelle})")}
+            if spalte not in vorhanden:
+                con.execute(f"ALTER TABLE {tabelle} ADD COLUMN {spalte} {definition}")
         con.commit()
         con.close()
 

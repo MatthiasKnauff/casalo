@@ -2,7 +2,7 @@
 {% block titel %}Versammlungen{% endblock %}
 {% block inhalt %}
 <div class="kopf"><div><h1>Eigentümerversammlungen</h1><p class="unter">Einladung mindestens drei Wochen vorher (§ 24 Abs. 4 WEG)</p></div></div>
-<section class="karte eng"><div class="scroll"><table>
+<section class="karte eng"><div class="scroll"><table class="tab" data-tab="versammlungen">
   <tr><th>Termin</th><th>Gemeinschaft</th><th>Ort</th><th class="zahl">TOPs</th><th>Einladung</th><th>Status</th></tr>
   {% for v in versammlungen %}
   <tr><td style="white-space:nowrap"><a href="/versammlung/{{ v.id }}"><b>{{ v.beginn|datum }}</b></a></td><td>{{ v.g_name }}</td>

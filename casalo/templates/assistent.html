@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% set ohne_rechts = true %}
+{% block titel %}Einrichtung{% endblock %}
+{% block inhalt %}
+<div class="kopf"><div>
+  <p class="muted klein" style="margin:0">Assistent · neue Gemeinschaft</p>
+  <h1>{{ ('WEG ' ~ g.name) if g else 'Neue Gemeinschaft einrichten' }}</h1>
+  <p class="unter">Jeder Schritt speichert sofort. Sie können jederzeit aufhören und später hier weitermachen.</p></div>
+  {% if g %}<a class="knopf zweit" href="/g/{{ g.id }}">Assistent verlassen</a>{% endif %}
+</div>
+
+<ol class="assi-schritte" aria-label="Schritte">
+  {% for k, t in SCHRITTE %}
+  <li class="{{ 'jetzt' if k == n else ('ok' if stand.get(k) else '') }}">
+    {% if g and k != n %}<a href="/assistent/{{ g.id }}/{{ k }}">{% endif %}
+    <span class="assi-nr">{{ '✓' if stand.get(k) and k != n else k }}</span>{{ t }}
+    {% if g and k != n %}</a>{% endif %}
+  </li>
+  {% endfor %}
+</ol>
+
+{% if n == 1 %}
+<form method="post" action="{{ '/assistent/' ~ g.id ~ '/1' if g else '/assistent' }}" class="karte">
+  <h2>Die Wohnanlage</h2>
+  <div class="felder">
+    <div style="grid-column: span 2"><label for="name">Name</label><input id="name" name="name" value="{{ w.name or '' }}" placeholder="Rüttenscheider Str. 112" required autofocus></div>
+    <div><label for="nr">Kurzzeichen (optional)</label><input id="nr" name="nr" value="{{ w.nr or '' }}" placeholder="WEG 03"></div>
+    <div><label for="strasse">Straße und Hausnummer</label><input id="strasse" name="strasse" value="{{ w.strasse or '' }}"></div>
+    <div><label for="plz">PLZ</label><input id="plz" name="plz" value="{{ w.plz or '' }}" inputmode="numeric" maxlength="5"></div>
+    <div><label for="ort">Ort</label><input id="ort" name="ort" value="{{ w.ort or '' }}"></div>
+    <div><label for="seit">Verwaltet seit</label><input id="seit" type="date" name="verwalter_seit" value="{{ w.verwalter_seit or '' }}"></div>
+  </div>
+  <p class="hinweis">Die Postleitzahl braucht auch das KI-Telefon: Damit prüft es, ob ein Anrufer wirklich Eigentümer ist.</p>
+  <div class="assi-fuss"><span></span><button>Speichern und weiter →</button></div>
+</form>
+
+{% elif n == 2 %}
+<section class="karte eng">
+  <h2 class="zeile">Einheiten <span class="rechts klein muted">MEA zusammen: <b class="{{ '' if stand.summe_mea in (1000, 10000, 100000) else 'rot' }}">{{ stand.summe_mea|zahl }}</b></span></h2>
+  <p class="hinweis" style="padding:0 12px">Felder direkt in der Tabelle anklicken und bearbeiten – Enter speichert, Tab springt weiter.</p>
+  <div class="scroll"><table class="tab" data-tab="assistent-einheiten" data-filter="aus">
+    <thead><tr><th>Nr.</th><th>Lage</th><th>Art</th><th class="zahl">Wohnfläche</th><th class="zahl">MEA</th></tr></thead>
+    <tbody>
+    {% for e in stand.einheiten %}<tr>{{ zelle('einheit', e, 'nr') }}{{ zelle('einheit', e, 'lage') }}{{ zelle('einheit', e, 'art') }}{{ zelle('einheit', e, 'wohnflaeche') }}{{ zelle('einheit', e, 'mea') }}</tr>
+    {% else %}<tr><td colspan="5" class="leer">Noch keine Einheiten – unten einzeln oder als Serie anlegen.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+<div class="raster">
+  <form method="post" class="karte" id="neu"><input type="hidden" name="aktion" value="einheit">
+    <h2>Einzeln anlegen</h2>
+    <div class="felder">
+      <div><label>Nr.</label><input name="nr" placeholder="W 01" required></div>
+      <div><label>Lage</label><input name="lage" placeholder="EG links"></div>
+      <div><label>Wohnfläche m²</label><input name="wohnflaeche" inputmode="decimal"></div>
+      <div><label>MEA</label><input name="mea" inputmode="decimal"></div>
+    </div>
+    <p><button class="zweit">Hinzufügen</button></p>
+  </form>
+  <form method="post" class="karte"><input type="hidden" name="aktion" value="serie">
+    <h2>Als Serie anlegen</h2>
+    <div class="felder">
+      <div><label>Anzahl</label><input name="anzahl" inputmode="numeric" placeholder="18" required></div>
+      <div><label>Vorsilbe</label><input name="praefix" value="W"></div>
+    </div>
+    <p class="hinweis">Legt W 01, W 02 … an. Für Stellplätze z. B. „TG“.</p>
+    <p><button class="zweit">Anlegen</button></p>
+  </form>
+  <form method="post" class="karte"><input type="hidden" name="aktion" value="mea">
+    <h2>MEA aus der Wohnfläche</h2>
+    <div class="felder"><div><label>verteilen auf</label><input name="summe" value="1000" inputmode="numeric"></div></div>
+    <p class="hinweis">Nur als Hilfe, wenn die Teilungserklärung nicht zur Hand ist – sie gilt immer vorrangig.</p>
+    <p><button class="zweit" data-frage="Alle MEA nach Wohnfläche neu verteilen?" data-ok="Verteilen">Verteilen</button></p>
+  </form>
+</div>
+<form method="post" class="assi-fuss"><a class="knopf zweit" href="/assistent/{{ g.id }}/1">← Zurück</a><button>Weiter →</button></form>
+
+{% elif n == 3 %}
+{% for e in stand.einheiten %}
+<section class="karte" id="e{{ e.id }}">
+  <div class="zeile"><h2 style="margin:0">{{ e.nr }} <span class="muted klein">{{ e.lage }}</span></h2>
+    <span class="rechts">{% for p in eigentum[e.id] %}<span class="chip ok">{{ p.firma or (p.nachname ~ ', ' ~ p.vorname) }}</span> {% else %}<span class="chip fehler">noch kein Eigentümer</span>{% endfor %}</span></div>
+  <details class="form" {{ 'open' if not eigentum[e.id] and loop.index <= 3 }}><summary>{{ 'Weiteren Eigentümer' if eigentum[e.id] else 'Eigentümer' }} eintragen</summary>
+    <form method="post"><input type="hidden" name="aktion" value="eigentuemer"><input type="hidden" name="einheit_id" value="{{ e.id }}">
+      <div class="felder">
+        <div><label>Anrede</label><input name="anrede" placeholder="Frau / Herr"></div>
+        <div><label>Vorname</label><input name="vorname"></div>
+        <div><label>Nachname</label><input name="nachname"></div>
+        <div><label>Firma</label><input name="firma"></div>
+        <div><label>E-Mail</label><input name="email" type="email"></div>
+        <div><label>Telefon</label><input name="telefon"></div>
+        <div><label>Eigentümer seit</label><input name="von" type="date"></div>
+      </div>
+      <p class="hinweis">Anschrift, Lastschrift und Versandweg später in der Detailkarte. Ohne E-Mail geht Post.</p>
+      <p><button class="zweit klein">Eintragen</button></p>
+    </form>
+  </details>
+</section>
+{% endfor %}
+<form method="post" class="assi-fuss"><a class="knopf zweit" href="/assistent/{{ g.id }}/2">← Zurück</a>
+  <span class="muted klein">{{ stand.ohne_eigentuemer|length }} Einheiten noch ohne Eigentümer</span><button>Weiter →</button></form>
+
+{% elif n == 4 %}
+<form method="post">
+<div class="raster">
+  {% for art, k, titel in [('hausgeld', hg, 'Hausgeldkonto'), ('ruecklage', rl, 'Rücklagenkonto')] %}
+  <section class="karte"><h2>{{ titel }}</h2>
+    <div class="felder">
+      <div><label>Bank</label><input name="{{ art }}_bank" value="{{ k.bank if k else '' }}"></div>
+      <div style="grid-column: span 2"><label>IBAN</label><input name="{{ art }}_iban" value="{{ k.iban if k else '' }}"></div>
+      <div><label>Anfangssaldo</label><input name="{{ art }}_saldo" value="{{ k.anfangssaldo_cent|betrag if k else '' }}" placeholder="0,00"></div>
+      <div><label>zum Datum</label><input type="date" name="{{ art }}_datum" value="{{ k.anfangsdatum if k else '' }}"></div>
+      <div><label>Abruf</label>
+        <div class="knopf-wahl" role="radiogroup">{% for w, t in [('fints','FinTS'),('finapi','finAPI'),('datei','Datei')] %}
+          <label class="kw"><input type="radio" name="{{ art }}_zugang" value="{{ w }}" {{ 'checked' if (k and k.zugang == w) or (not k and w == 'fints') }}><span>{{ t }}</span></label>{% endfor %}</div></div>
+    </div>
+  </section>
+  {% endfor %}
+</div>
+<section class="karte"><div class="felder"><div><label>SEPA-Gläubiger-ID (für Lastschriften, optional)</label><input name="glaeubiger_id" value="{{ g.glaeubiger_id }}" placeholder="DE98ZZZ09999999999"></div></div>
+  <p class="hinweis">Zugangsdaten für FinTS (Anmeldename, PIN) später beim Konto – die PIN wird verschlüsselt gespeichert.</p></section>
+<div class="assi-fuss"><a class="knopf zweit" href="/assistent/{{ g.id }}/3">← Zurück</a><button>Speichern und weiter →</button></div>
+</form>
+
+{% elif n == 5 %}
+<form method="post">
+<section class="karte eng"><h2>Wirtschaftsplan {{ jahr }}</h2>
+  <p class="hinweis" style="padding:0 12px">Jahresbeträge eintragen – die Vorschüsse je Einheit rechnet Casalo. Was Sie nicht wissen, bleibt leer.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Kostenart</th><th>Schlüssel</th><th class="zahl">Betrag im Jahr</th></tr></thead>
+    <tbody>
+    {% for ka in kostenarten %}<tr><td>{{ ka.name }}</td><td class="muted">{{ SCHLUESSEL[ka.schluessel] }}</td>
+      <td class="zahl" style="width:170px"><input name="ka_{{ ka.id }}" value="{{ wp.ansaetze.get(ka.id)|betrag }}" style="text-align:right" aria-label="{{ ka.name }}"></td></tr>{% endfor %}
+    <tr><td>Zuführung Erhaltungsrücklage</td><td class="muted">MEA</td>
+      <td class="zahl"><input name="ruecklage" value="{{ (wp.wp.ruecklage_cent if wp.wp else vorschlag_ruecklage)|betrag }}" style="text-align:right" aria-label="Rücklage"></td></tr>
+    </tbody>
+  </table></div>
+  {% if not wp.wp %}<p class="hinweis" style="padding:0 12px">Rücklage vorgeschlagen mit rund 10 € je m² Wohnfläche – nur ein Richtwert, beschließen muss die Versammlung.</p>{% endif %}
+</section>
+{% if wp.wp and wp.summe %}
+<section class="karte eng" id="vorschuesse"><h2>Vorschüsse je Einheit</h2><div class="scroll"><table class="tab" data-tab="assistent-vorschuss">
+  <thead><tr><th>Einheit</th><th class="zahl">je Jahr</th><th class="zahl">je Monat</th></tr></thead><tbody>
+  {% for e in stand.einheiten %}{% set d = wp.einheiten[e.id] %}<tr><td>{{ e.nr }}</td><td class="zahl">{{ d.jahr|eur }}</td><td class="zahl"><b>{{ d.monat|eur }}</b></td></tr>{% endfor %}
+  </tbody></table></div></section>
+{% endif %}
+<div class="assi-fuss"><a class="knopf zweit" href="/assistent/{{ g.id }}/4">← Zurück</a>
+  <span class="zeile"><button name="aktion" value="ueberspringen" class="zweit">Später</button><button name="aktion" value="rechnen" class="zweit">Vorschüsse berechnen</button><button>Speichern und weiter →</button></span></div>
+</form>
+
+{% elif n == 6 %}
+<section class="karte"><h2>Stand der Einrichtung</h2>
+  <ul class="pruefliste">
+    <li class="{{ 'ok' if stand[2] else 'offen' }}">{{ stand.einheiten|length }} Einheiten, MEA zusammen {{ stand.summe_mea|zahl }} {% if not stand[2] %}– <a href="/assistent/{{ g.id }}/2">ergänzen</a>{% endif %}</li>
+    <li class="{{ 'ok' if stand[3] else 'offen' }}">{% if stand[3] %}Alle Einheiten haben Eigentümer{% else %}{{ stand.ohne_eigentuemer|length }} Einheiten ohne Eigentümer – <a href="/assistent/{{ g.id }}/3">ergänzen</a>{% endif %}</li>
+    <li class="{{ 'ok' if stand[4] else 'offen' }}">{% if stand[4] %}Hausgeldkonto eingetragen{% else %}Noch kein Hausgeldkonto – <a href="/assistent/{{ g.id }}/4">ergänzen</a>{% endif %}</li>
+    <li class="{{ 'ok' if stand[5] else 'offen' }}">{% if stand[5] %}Wirtschaftsplan {{ jahr }} angelegt{% else %}Noch kein Wirtschaftsplan {{ jahr }} – <a href="/assistent/{{ g.id }}/5">ergänzen</a>{% endif %}</li>
+  </ul>
+  <p class="hinweis">Offene Punkte können Sie auch später erledigen – über die Seiten der Gemeinschaft.</p>
+</section>
+<form method="post" class="assi-fuss"><a class="knopf zweit" href="/assistent/{{ g.id }}/5">← Zurück</a><button>Einrichtung abschließen</button></form>
+{% endif %}
+{% endblock %}

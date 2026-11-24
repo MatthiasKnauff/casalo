@@ -1,21 +1,54 @@
 <!doctype html>
-<html lang="de">
+<html lang="de" data-dichte="{{ darstellung.dichte if darstellung else 'normal' }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="csrf" content="{{ csrf() }}">
 <title>{% block titel %}Casalo{% endblock %} · Casalo</title>
 <link rel="stylesheet" href="/static/style.css?v={{ VERSION }}">
+{% if darstellung %}<style>:root{--accent:{{ darstellung.accent }};--accent-bg:{{ darstellung.accent_bg }};--schrift:{{ darstellung.schrift_css|safe }};--gr:{{ darstellung.groesse }}px}</style>{% endif %}
+<script src="/static/vendor/htmx-2.0.4.min.js"></script>
+<script src="/static/js/kern.js?v={{ VERSION }}"></script>
+<script src="/static/js/undo.js?v={{ VERSION }}"></script>
+<script src="/static/js/tabelle.js?v={{ VERSION }}"></script>
+<script src="/static/js/rechts.js?v={{ VERSION }}"></script>
 </head>
 <body>
 {% if APP_ENV == 'test' %}<div class="banner">Testserver – wird {{ VERSION }}</div>{% endif %}
+{% if benutzer %}
+<header class="kopfleiste">
+  <a class="marke" href="/"><b>Casalo</b></a>
+  <button type="button" class="g-wahl" data-wahl='{{ g_wahl }}'{% if g_viele %} data-suche{% endif %} aria-haspopup="menu">
+    <span class="klein muted">Gemeinschaft</span>
+    <span class="g-name">{{ ('WEG ' ~ g_aktuell.name) if g_aktuell else 'wählen …' }}</span><span aria-hidden="true">▾</span>
+  </button>
+  <div class="kopf-rechts">
+    <div class="undo-gruppe" aria-label="Rückgängig">
+      <button type="button" id="undo-z" class="icon" disabled aria-label="Rückgängig">↶</button>
+      <button type="button" id="undo-n" class="icon zahl-knopf" aria-label="Verlauf"></button>
+      <button type="button" id="undo-w" class="icon" disabled aria-label="Wiederholen">↷</button>
+    </div>
+    <button type="button" class="icon" aria-label="Einstellungen" data-wahl='{{ menue_json }}'>⚙</button>
+  </div>
+</header>
+{% endif %}
 <div class="rahmen">
 {% if benutzer %}
 <nav class="seitenleiste" aria-label="Hauptnavigation">
-  <div class="marke"><b>Casalo</b><span>{{ verwaltung }}</span></div>
   {% set p = request.path %}
   <a class="nav {{ 'an' if p == '/' }}" href="/">Übersicht</a>
-  <a class="nav {{ 'an' if p.startswith('/gemeinschaft') or p.startswith('/g/') }}" href="/gemeinschaften">Gemeinschaften</a>
+  {% if g_aktuell %}
+  <div class="nav-gruppe">WEG {{ g_aktuell.name }}</div>
+  {% set gp = '/g/' ~ g_aktuell.id %}
+  <a class="nav sub {{ 'an' if p == gp and request.args.get('tab', 'einheiten') == 'einheiten' }}" href="{{ gp }}">Einheiten &amp; Eigentümer</a>
+  <a class="nav sub {{ 'an' if p.startswith(gp ~ '/buchungen') }}" href="{{ gp }}/buchungen">Buchungen</a>
+  <a class="nav sub {{ 'an' if p.startswith(gp ~ '/wirtschaftsplan') }}" href="{{ gp }}/wirtschaftsplan/{{ heute_jahr + 1 }}">Wirtschaftsplan</a>
+  <a class="nav sub {{ 'an' if p.startswith(gp ~ '/abrechnung') or p.startswith(gp ~ '/heizkosten') }}" href="{{ gp }}/abrechnung/{{ heute_jahr - 1 }}">Abrechnung</a>
+  <a class="nav sub {{ 'an' if p == gp and request.args.get('tab') in ('konten','kostenarten','beschluesse','vorgaenge','einstellungen','finanzen') }}" href="{{ gp }}?tab=konten">Konten, Beschlüsse …</a>
+  {% if g_aktuell.assistent %}<a class="nav sub hinweis-nav" href="/assistent/{{ g_aktuell.id }}/{{ g_aktuell.assistent }}">Einrichtung fortsetzen</a>{% endif %}
+  <div class="trenner"></div>
+  {% endif %}
+  <a class="nav {{ 'an' if p.startswith('/gemeinschaften') }}" href="/gemeinschaften">Alle Gemeinschaften</a>
   <a class="nav {{ 'an' if p.startswith('/person') }}" href="/personen">Eigentümer</a>
   <a class="nav {{ 'an' if p.startswith('/versammlung') }}" href="/versammlungen">Versammlungen</a>
   <a class="nav {{ 'an' if p.startswith('/vorgaenge') }}" href="/vorgaenge">Vorgänge</a>
@@ -23,8 +56,6 @@
   <a class="nav {{ 'an' if p.startswith('/bank') }}" href="/bank">Bank &amp; Hausgeld</a>
   <div class="trenner"></div>
   <span class="nav" style="color:#8a94a3">Mietverwaltung (später)</span>
-  {% if benutzer.rolle == 'admin' %}<a class="nav {{ 'an' if p.startswith('/einstellungen') }}" href="/einstellungen">Einstellungen</a>{% endif %}
-  <a class="nav" href="/abmelden">Abmelden ({{ benutzer.name }})</a>
   <span class="nav klein muted">Version {{ VERSION }}</span>
 </nav>
 {% endif %}
@@ -34,16 +65,13 @@
 {% endwith %}
 {% block inhalt %}{% endblock %}
 </main>
+{% if benutzer and not ohne_rechts %}
+<aside id="rechts" class="detailbereich zu" aria-label="Details">
+  <button type="button" id="rechts-reiter" class="rechts-reiter" aria-label="Details zeigen">Details</button>
+  <div class="rechts-kopf"><span>Details</span><button type="button" id="rechts-zu" class="icon" aria-label="Details zuklappen">⟩</button></div>
+  <div id="rechts-inhalt" class="rechts-inhalt"><p class="muted klein">Zeile anklicken – hier erscheinen die Details. Felder lassen sich direkt bearbeiten.</p></div>
+</aside>
+{% endif %}
 </div>
-<script>
-// Schutz gegen fremde Formulare: jedes POST-Formular bekommt den Sitzungsschlüssel
-document.addEventListener('submit', function (e) {
-  var f = e.target;
-  if ((f.method || '').toLowerCase() !== 'post' || f.querySelector('input[name=_csrf]')) return;
-  var i = document.createElement('input');
-  i.type = 'hidden'; i.name = '_csrf'; i.value = document.querySelector('meta[name=csrf]').content;
-  f.appendChild(i);
-}, true);
-</script>
 </body>
 </html>

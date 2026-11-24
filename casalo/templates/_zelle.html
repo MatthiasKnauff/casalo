@@ -1,0 +1,23 @@
+{% set zid = 'z-' ~ art ~ '-' ~ oid ~ '-' ~ feld %}{% set url = '/feld/' ~ art ~ '/' ~ oid ~ '/' ~ feld %}
+{%- if modus == 'edit' -%}
+{%- set eingabe = ((roh|zahl if fd.typ == 'zahl' and roh is number else (roh|datum if fd.typ == 'datum' and roh and not fehler else roh)) if roh is not none else '') -%}
+<td id="{{ zid }}" class="edit-offen {{ klasse }}">
+  <form class="zelle-form" hx-post="{{ url }}" hx-target="closest td" hx-swap="outerHTML" data-anzeige="{{ url }}?anzeige=1&klasse={{ klasse|urlencode }}" data-alt="{{ eingabe }}">
+    <input type="hidden" name="klasse" value="{{ klasse }}">
+    {%- if fd.typ == 'wahl' %}
+    <div class="zelle-wahl" role="radiogroup" aria-label="{{ fd.name }}">
+      {% for w, t in fd.optionen %}<button type="submit" name="wert" value="{{ w }}" class="klein {{ '' if w == wert else 'zweit' }}" role="radio" aria-checked="{{ 'true' if w == wert else 'false' }}">{{ t }}</button>{% endfor %}
+    </div>
+    {%- elif fd.typ == 'lang' %}
+    <textarea name="wert" aria-label="{{ fd.name }}" rows="3">{{ eingabe }}</textarea>
+    {%- else %}
+    <input name="wert" aria-label="{{ fd.name }}" value="{{ eingabe }}"
+      {%- if fd.typ == 'datum' %} placeholder="TT.MM.JJJJ"{% elif fd.typ == 'email' %} type="email"{% elif fd.typ in ('zahl','ganz') %} inputmode="decimal"{% endif %} autocomplete="off">
+    {%- endif %}
+    {% if fehler %}<div class="zelle-fehler" role="alert">{{ fehler }}</div>{% endif %}
+  </form>
+</td>
+{%- else -%}
+<td id="{{ zid }}" class="edit {{ klasse }}" tabindex="0" hx-get="{{ url }}?klasse={{ klasse|urlencode }}" hx-trigger="click" hx-swap="outerHTML"
+  title="{{ fd.name }} – klicken zum Bearbeiten"{% if sortwert is not none %} data-sort="{{ sortwert }}"{% endif %}>{{ text if text else '' }}{% if not text %}<span class="leerwert">–</span>{% endif %}</td>
+{%- endif %}

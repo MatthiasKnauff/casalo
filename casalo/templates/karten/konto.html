@@ -1,0 +1,11 @@
+{% with art='Konto', titel=('Rücklagenkonto' if k.art == 'ruecklage' else 'Hausgeldkonto'), unter=k.bank, seite='/g/' ~ k.gemeinschaft_id ~ '?tab=konten' %}{% include "karten/_kopf.html" %}{% endwith %}
+<table class="kv-tab">
+  <tr><th>Art</th>{{ zelle('konto', k, 'art') }}</tr>
+  <tr><th>Bank</th>{{ zelle('konto', k, 'bank') }}</tr>
+  <tr><th>IBAN</th>{{ zelle('konto', k, 'iban') }}</tr>
+  <tr><th>BIC</th>{{ zelle('konto', k, 'bic') }}</tr>
+  <tr><th>Abruf</th>{{ zelle('konto', k, 'zugang') }}</tr>
+  <tr><th>Saldo heute</th><td class="zahl"><b>{{ saldo|eur }}</b></td></tr>
+  {% if k.letzter_abruf %}<tr><th>Letzter Abruf</th><td>{{ k.letzter_abruf|datum }}</td></tr>{% endif %}
+</table>
+{% if umsaetze %}<h3>Letzte Umsätze</h3><table class="kv-tab">{% for u in umsaetze %}<tr><th>{{ u.datum|datum }}</th><td>{{ u.name }}<div class="klein muted">{{ u.zweck }}</div></td><td class="zahl">{{ u.betrag_cent|eur }}</td></tr>{% endfor %}</table>{% endif %}

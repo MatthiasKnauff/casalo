@@ -25,6 +25,16 @@ TABS = [("einheiten", "Einheiten & Eigentümer"), ("konten", "Konten"), ("kosten
         ("einstellungen", "Einstellungen")]
 
 
+def neue_gemeinschaft(nr, name, strasse, plz, ort, assistent=0):
+    """Gemeinschaft mit den üblichen Kostenarten anlegen."""
+    gid = db.ex("INSERT INTO gemeinschaft (nr, name, strasse, plz, ort, assistent) VALUES (?, ?, ?, ?, ?, ?)",
+                (nr, name, strasse, plz, ort, assistent))
+    for n, (kname, sch, w) in enumerate(STANDARD_KOSTENARTEN):
+        db.ex("INSERT INTO kostenart (gemeinschaft_id, name, schluessel, stichworte, reihenfolge) VALUES (?, ?, ?, ?, ?)",
+              (gid, kname, sch, w, n))
+    return gid
+
+
 @bp.get("/gemeinschaften")
 def gemeinschaften():
     rows = db.q("SELECT g.*, (SELECT COUNT(*) FROM einheit e WHERE e.gemeinschaft_id = g.id) AS n_einheiten, "
@@ -38,11 +48,7 @@ def gemeinschaft_neu():
     if not f("name"):
         flash("Bitte einen Namen angeben (meist die Anschrift).", "fehler")
         return redirect("/gemeinschaften")
-    gid = db.ex("INSERT INTO gemeinschaft (nr, name, strasse, plz, ort) VALUES (?, ?, ?, ?, ?)",
-                (f("nr"), f("name"), f("strasse"), f("plz"), f("ort")))
-    for n, (name, s, w) in enumerate(STANDARD_KOSTENARTEN):
-        db.ex("INSERT INTO kostenart (gemeinschaft_id, name, schluessel, stichworte, reihenfolge) VALUES (?, ?, ?, ?, ?)",
-              (gid, name, s, w, n))
+    gid = neue_gemeinschaft(f("nr"), f("name"), f("strasse"), f("plz"), f("ort"))
     flash("Gemeinschaft angelegt – mit üblichen Kostenarten. Als Nächstes die Einheiten eintragen.", "ok")
     return redirect(f"/g/{gid}")
 

@@ -25,7 +25,7 @@
     <div class="scroll"><table>
       <tr><th>Zeit</th><th>Anrufer</th><th>Anliegen</th><th>Status</th></tr>
       {% for a in anrufe %}
-      <tr><td class="muted">{{ a.beginn[11:16] }}</td>
+      <tr data-karte="/karte/anruf/{{ a.id }}"><td class="muted">{{ a.beginn[11:16] }}</td>
           <td><a href="/anruf/{{ a.id }}">{{ a.firma or ((a.vorname ~ ' ' ~ a.nachname).strip()) or a.nummer or 'unbekannt' }}</a></td>
           <td>{{ a.anliegen or '–' }}</td>
           <td><span class="chip {{ 'fehler' if a.status == 'rueckruf' else 'ok' if a.status in ('vorgang','beantwortet') else 'info' }}">{{ {'laeuft':'läuft','beantwortet':'beantwortet','vorgang':'Vorgang','rueckruf':'Rückruf nötig','weitergeleitet':'weitergeleitet'}.get(a.status, a.status) }}</span></td></tr>
@@ -52,7 +52,7 @@
     {% if vorgaenge %}
     <table>
       {% for v in vorgaenge %}
-      <tr><td>{% if v.notfallart %}<span class="chip fehler">Notfall</span> {% endif %}{{ v.titel }}<div class="muted klein">{{ v.g_name or '' }}{% if v.rueckruf_bis %} · Rückruf bis {{ v.rueckruf_bis|datum }}{% endif %}</div></td>
+      <tr data-karte="/karte/vorgang/{{ v.id }}"><td>{% if v.notfallart %}<span class="chip fehler">Notfall</span> {% endif %}{{ v.titel }}<div class="muted klein">{{ v.g_name or '' }}{% if v.rueckruf_bis %} · Rückruf bis {{ v.rueckruf_bis|datum }}{% endif %}</div></td>
           <td class="muted klein" style="white-space:nowrap">{{ v.angelegt|datum }}</td></tr>
       {% endfor %}
     </table>
