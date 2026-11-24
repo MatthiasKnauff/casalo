@@ -154,7 +154,7 @@ button.icon:not(:disabled):hover { background: var(--hov); }
 .seitenleiste { position: sticky; top: 58px; align-self: flex-start; max-height: calc(100vh - 58px); overflow-y: auto; }
 
 /* ---------------------------------------------------------------- Bereich rechts */
-.detailbereich { flex: 0 0 380px; max-width: 420px; background: var(--panel); border-left: 1px solid var(--line); position: sticky; top: 58px; align-self: flex-start; height: calc(100vh - 58px); overflow-y: auto; }
+.detailbereich { flex: 0 0 var(--rb, 380px); background: var(--panel); border-left: 1px solid var(--line); position: sticky; top: 58px; align-self: flex-start; height: calc(100vh - 58px); overflow-y: auto; }
 .rechts-kopf { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); font-weight: 650; position: sticky; top: 0; background: var(--panel); z-index: 2; }
 .rechts-inhalt { padding: 14px 16px 40px; }
 .rechts-reiter { display: none; }
@@ -271,3 +271,24 @@ th { color: var(--muted); }
 .portal-unter { color: rgba(255,255,255,.85); font-size: 14px; }
 .portal .kopf-rechts form { display: inline; }
 .portal h1 { margin-top: 14px; }
+
+/* ---------------------------------------------------------------- Bereich rechts: Breite, frei, eigenes Fenster */
+.rechts-griff { display: none; }
+body.rechts-dock.rechts-offen .rechts-griff { display: block; flex: 0 0 6px; margin-right: -6px; position: sticky; top: 58px; height: calc(100vh - 58px);
+  cursor: col-resize; z-index: 5; align-self: flex-start; }
+.rechts-griff:hover { background: var(--accent-bg); }
+.rechts-knoepfe { display: inline-flex; gap: 4px; }
+.rechts-kopf button.icon.klein { min-height: 30px; min-width: 30px; font-size: 14px; padding: 0 6px; }
+.detailbereich [data-rechts="dock"] { display: none; }
+.detailbereich.frei { position: fixed; z-index: 60; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 14px 40px var(--schatten);
+  resize: both; overflow: auto; min-width: 300px; min-height: 200px; max-width: calc(100vw - 8px); max-height: calc(100vh - 8px); }
+.detailbereich.frei .rechts-kopf { cursor: move; user-select: none; border-radius: 12px 12px 0 0; }
+.detailbereich.frei [data-rechts="frei"], .detailbereich.frei #rechts-zu { display: none; }
+.detailbereich.frei .rechts-kopf [data-rechts="dock"] { display: inline-flex; }
+.rechts-weg { display: none; }
+.detailbereich.weg { flex: 0 0 220px; }
+.detailbereich.weg .rechts-kopf, .detailbereich.weg .rechts-inhalt, .detailbereich.weg .rechts-reiter { display: none; }
+.detailbereich.weg .rechts-weg { display: block; padding: 18px 16px; color: var(--muted); font-size: 14px; }
+.detailbereich.weg .rechts-weg [data-rechts="dock"] { display: inline-flex; }
+body.details-fenster .rechts-kopf { position: sticky; top: 0; }
+@media (max-width: 1100px) { .detailbereich.frei { position: fixed; } .rechts-griff { display: none !important; } [data-rechts="fenster"] { display: none; } }

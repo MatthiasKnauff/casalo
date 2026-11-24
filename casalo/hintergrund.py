@@ -1,4 +1,4 @@
-"""Hintergrundaufgaben: täglicher Bankabruf (FinTS) um ABRUF_UHRZEIT (Standard 06:00)."""
+"""Hintergrundaufgaben: täglicher Bankabruf (FinTS und finAPI) um ABRUF_UHRZEIT (Standard 06:00)."""
 import datetime
 import logging
 import os
@@ -16,9 +16,17 @@ def _naechster(jetzt, uhrzeit):
 
 
 def alle_abrufen(app):
-    from . import bank, db
-    from .v_bank import abrufen
+    from . import bank, db, finapi
+    from .v_bank import abrufen, finapi_abrufen
     with app.app_context():
+        for k in db.q("SELECT * FROM konto WHERE zugang = 'finapi' AND finapi_konto != '' AND finapi_formular = ''"):
+            try:
+                neu, auto = finapi_abrufen(k)
+                log.info("Konto %s (finAPI): %s neu, %s gebucht", k["iban"], neu, auto)
+            except finapi.FormularNoetig:
+                log.info("Konto %s (finAPI): Bank verlangt Freigabe – wartet auf Bestätigung in Casalo", k["iban"])
+            except Exception as e:  # ein Konto darf die anderen nicht aufhalten
+                log.warning("Konto %s (finAPI): Abruf fehlgeschlagen: %s", k["iban"], e)
         for k in db.q("SELECT * FROM konto WHERE zugang = 'fints' AND fints_pin != '' AND fints_zustand = ''"):
             try:
                 neu, auto = abrufen(k)

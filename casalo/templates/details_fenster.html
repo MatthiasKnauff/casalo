@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="de" data-dichte="{{ darstellung.dichte }}" data-theme="{{ darstellung.schema }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf" content="{{ csrf() }}">
+<title>Details · Casalo</title>
+<link rel="stylesheet" href="/static/style.css?v={{ VERSION }}">
+<style>:root{--akz-d:{{ darstellung.akzent_dunkel }};--akz-h:{{ darstellung.akzent_hell }};--schrift:{{ darstellung.schrift_css|safe }};--gr:{{ darstellung.groesse }}px}</style>
+<script src="/static/vendor/htmx-2.0.4.min.js"></script>
+<script src="/static/js/kern.js?v={{ VERSION }}"></script>
+<script src="/static/js/undo.js?v={{ VERSION }}"></script>
+<script src="/static/js/tabelle.js?v={{ VERSION }}"></script>
+</head>
+<body class="details-fenster">
+<div class="rechts-kopf"><span>Details</span><button type="button" class="icon klein" id="zurueck" title="Wieder im Hauptfenster rechts zeigen">⇲ andocken</button></div>
+<div id="rechts-inhalt" class="rechts-inhalt"><p class="muted klein">Im Hauptfenster eine Zeile anklicken – die Details erscheinen hier.</p></div>
+<script>
+// Eigenes Browserfenster für die Details: das Hauptfenster lädt Karten hierher (Casalo.karte → laden).
+window.CasaloDetails = { laden: (url) => htmx.ajax('GET', url, { target: '#rechts-inhalt', swap: 'innerHTML' }) };
+document.getElementById('zurueck').onclick = () => { if (opener && opener.Casalo) opener.Casalo.rechtsModus('dock'); window.close(); };
+addEventListener('pagehide', () => { if (opener && !opener.closed && opener.Casalo) opener.Casalo.fensterZu(); });
+document.addEventListener('click', (e) => {          // Verweise auf andere Karten im Fenster selbst öffnen, ganze Seiten im Hauptfenster
+  const a = e.target.closest('a[href]');
+  if (!a || a.target === '_blank' || a.getAttribute('href').startsWith('#') || a.hasAttribute('hx-get')) return;
+  if (opener && !opener.closed) { e.preventDefault(); opener.location.href = a.href; opener.focus(); }
+});
+const merk = () => { try { localStorage.setItem('casalo.rechts.fenster', JSON.stringify({ w: outerWidth, h: outerHeight, x: screenX, y: screenY })); } catch { /* egal */ } };
+let t = 0; addEventListener('resize', () => { clearTimeout(t); t = setTimeout(merk, 300); }); addEventListener('beforeunload', merk);
+</script>
+</body>
+</html>

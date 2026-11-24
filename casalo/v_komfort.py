@@ -281,6 +281,12 @@ def karte(art, oid):
     abort(404)
 
 
+@bp.get("/details")
+def details_fenster():
+    """Leeres Fenster für die Detailkarten (Bereich rechts als eigenes Browserfenster, z. B. auf dem zweiten Bildschirm)."""
+    return render_template("details_fenster.html")
+
+
 KARTEN = {}          # weitere Detailkarten, von anderen Modulen eingetragen: art → Funktion(oid)
 
 

@@ -75,9 +75,15 @@
 {% block inhalt %}{% endblock %}
 </main>
 {% if benutzer and not ohne_rechts %}
+<div id="rechts-griff" class="rechts-griff" title="Breite ziehen – Doppelklick: Standardbreite" aria-hidden="true"></div>
 <aside id="rechts" class="detailbereich zu" aria-label="Details">
   <button type="button" id="rechts-reiter" class="rechts-reiter" aria-label="Details zeigen">Details</button>
-  <div class="rechts-kopf"><span>Details</span><button type="button" id="rechts-zu" class="icon" aria-label="Details zuklappen">⟩</button></div>
+  <div class="rechts-kopf"><span>Details</span><span class="rechts-knoepfe">
+    <button type="button" class="icon klein" data-rechts="fenster" title="In ein eigenes Browserfenster – z. B. auf den zweiten Bildschirm" aria-label="Eigenes Fenster">⇱</button>
+    <button type="button" class="icon klein" data-rechts="frei" title="Als freies Fenster abdocken" aria-label="Abdocken">⧉</button>
+    <button type="button" class="icon klein" data-rechts="dock" title="Wieder rechts andocken" aria-label="Andocken">⇲</button>
+    <button type="button" id="rechts-zu" class="icon klein" title="An den Rand klappen" aria-label="Details zuklappen">⟩</button></span></div>
+  <div class="rechts-weg"><p>Die Details sind in einem <b>eigenen Fenster</b> geöffnet.</p><button type="button" class="klein" data-rechts="dock">↩ hierher zurückholen</button></div>
   <div id="rechts-inhalt" class="rechts-inhalt"><p class="muted klein">Zeile anklicken – hier erscheinen die Details. Felder lassen sich direkt bearbeiten.</p></div>
 </aside>
 {% endif %}

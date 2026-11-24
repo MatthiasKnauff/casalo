@@ -432,6 +432,9 @@ NACHTRAEGE = [
     ("vorgang", "auftrag_id", "INTEGER"),
     ("notfallregel", "dienstleister_id", "INTEGER REFERENCES dienstleister(id)"),   # Notdienst-Nummer kommt vom Dienstleister
     ("gemeinschaft", "zustimmung_12", "INTEGER NOT NULL DEFAULT 0"),               # Veräußerung braucht Verwalterzustimmung (§ 12 WEG)
+    ("konto", "finapi_verbindung", "TEXT NOT NULL DEFAULT ''"),     # finAPI: bankConnectionId
+    ("konto", "finapi_konto", "TEXT NOT NULL DEFAULT ''"),          # finAPI: accountId
+    ("konto", "finapi_formular", "TEXT NOT NULL DEFAULT ''"),       # finAPI: offenes Web-Formular (id)
 ]
 
 # Vorbelegung § 35a für Kostenarten, die vor dieser Funktion angelegt wurden (Name → Einordnung, Lohnanteil %)
@@ -498,6 +501,7 @@ DEFAULTS = {
     "datev_berater": "", "datev_mandant": "", "datev_erloes_hausgeld": "8000", "datev_erloes_umlage": "8010",
     "datev_konto_sonstig": "1590", "datev_kosten_standard": "4900",
     "portal_aktiv": "1", "portal_belege": "0",
+    "finapi_umgebung": "sandbox", "finapi_client_id": "", "finapi_client_secret": "", "finapi_user": "", "finapi_user_pw": "",
     "mahn_frist_tage": "14", "mahn_schwelle_cent": "500", "mahn_gebuehr_1": "0", "mahn_gebuehr_2": "500", "mahn_gebuehr_3": "1000",
 }
 

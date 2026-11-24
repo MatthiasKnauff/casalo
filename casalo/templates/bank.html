@@ -48,9 +48,14 @@
   <thead><tr><th>Gemeinschaft</th><th>Konto</th><th>Abruf</th><th class="zahl">Saldo</th><th data-nosort data-name="Aktionen"></th></tr></thead><tbody>
   {% for k in konten %}
   <tr data-karte="/karte/konto/{{ k.id }}"><td>{{ k.g_name }}</td><td class="klein">{{ 'Rücklage' if k.art == 'ruecklage' else 'Hausgeld' }} · {{ k.bank }}<br><span class="muted">{{ k.iban }}</span></td>
-      <td class="klein">{{ {'fints':'FinTS','finapi':'finAPI (folgt)','datei':'Datei'}[k.zugang] }}{% if k.letzter_abruf %}<br><span class="muted">{{ k.letzter_abruf|datum }}</span>{% endif %}</td>
+      <td class="klein">{{ {'fints':'FinTS','finapi':'finAPI','datei':'Datei'}[k.zugang] }}{% if k.letzter_abruf %}<br><span class="muted">{{ k.letzter_abruf|datum }}</span>{% endif %}</td>
       <td class="zahl">{{ k.saldo|eur }}</td>
-      <td>{% if k.zugang == 'fints' and not k.fints_zustand %}<form method="post" action="/bank/konto/{{ k.id }}/abruf"><button class="klein zweit">Abrufen</button></form>{% endif %}</td></tr>
+      <td>{% if k.zugang == 'fints' and not k.fints_zustand %}<form method="post" action="/bank/konto/{{ k.id }}/abruf"><button class="klein zweit">Abrufen</button></form>
+        {% elif k.zugang == 'finapi' %}
+          {% if k.finapi_formular %}<form method="post" action="/bank/konto/{{ k.id }}/finapi/weiter"><button class="klein">Freigegeben – weiter</button></form>
+          {% elif k.finapi_konto %}<form method="post" action="/bank/konto/{{ k.id }}/abruf"><button class="klein zweit">Abrufen</button></form>
+          {% else %}<form method="post" action="/bank/konto/{{ k.id }}/finapi/verbinden"><button class="klein" {{ 'disabled title="erst unter Einstellungen → finAPI einrichten"' if not finapi_bereit }}>Mit finAPI verbinden</button></form>{% endif %}
+        {% endif %}</td></tr>
   {% else %}<tr><td colspan="5" class="leer">Konten legen Sie bei der Gemeinschaft an.</td></tr>{% endfor %}
 </tbody></table></div></section>
 <section class="karte"><h2>Kontoauszug einlesen</h2>

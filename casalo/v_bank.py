@@ -4,7 +4,7 @@ import json
 
 from flask import Response, abort, flash, redirect, render_template, request
 
-from . import bank, daten, db, forderungen, rechnen
+from . import bank, daten, db, finapi, forderungen, rechnen
 from .web import bp, f, f_int, gemeinschaft_oder_404
 
 
@@ -140,7 +140,7 @@ def bank_seite():
         liste.append(dict(u) | {"v": json.loads(u["vorschlag"]) if u["vorschlag"] else None})
     gebucht = db.q("SELECT COUNT(*) AS n FROM umsatz WHERE status = 'gebucht'", one=True)["n"]
     return render_template("bank.html", konten=konten, umsaetze=liste, auswahl=auswahl, gebucht=gebucht,
-                           produkt_id=bool(db.setting("fints_produkt_id")))
+                           produkt_id=bool(db.setting("fints_produkt_id")), finapi_bereit=finapi.eingerichtet())
 
 
 @bp.post("/bank/konto/<int:kid>/abruf")
@@ -148,8 +148,10 @@ def bank_abruf(kid):
     k = db.q("SELECT * FROM konto WHERE id = ?", (kid,), one=True)
     if not k:
         abort(404)
+    if k["zugang"] == "finapi":
+        return _finapi_abruf(k)
     if k["zugang"] != "fints":
-        flash("Dieses Konto wird per Datei eingelesen" + (" (finAPI folgt)." if k["zugang"] == "finapi" else "."), "fehler")
+        flash("Dieses Konto wird per Datei eingelesen.", "fehler")
         return redirect("/bank")
     try:
         neu, auto = abrufen(k, tan=f("tan") or None)
@@ -230,6 +232,67 @@ def umsatz_buchen(uid):
         return redirect("/bank")
     flash("Gebucht.", "ok")
     return redirect("/bank")
+
+
+# ------------------------------------------------------------------ finAPI
+def finapi_abrufen(konto):
+    """Wie abrufen() für FinTS: aktualisieren, Umsätze holen, speichern. Wirft finapi.FormularNoetig."""
+    try:
+        return speichern(konto, finapi.abrufen_daten(konto))
+    except finapi.FormularNoetig as f:
+        db.ex("UPDATE konto SET finapi_formular = ? WHERE id = ?", (f.formular_id, konto["id"]))
+        raise
+
+
+def _finapi_abruf(k):
+    if not k["finapi_konto"]:
+        flash("Das Konto ist noch nicht mit finAPI verbunden – „Mit finAPI verbinden“.", "fehler")
+        return redirect("/bank")
+    try:
+        neu, auto = finapi_abrufen(k)
+        flash(f"{neu} neue Umsätze, davon {auto} automatisch gebucht.", "ok")
+    except finapi.FormularNoetig as f:
+        flash("Die Bank verlangt eine Freigabe – bitte im finAPI-Formular bestätigen und danach „Freigegeben – weiter“.", "fehler")
+        if f.url:
+            return redirect(f.url)
+    except finapi.FinapiFehler as e:
+        flash(str(e), "fehler")
+    return redirect("/bank")
+
+
+@bp.post("/bank/konto/<int:kid>/finapi/verbinden")
+def finapi_verbinden(kid):
+    k = db.q("SELECT * FROM konto WHERE id = ?", (kid,), one=True)
+    if not k or k["zugang"] != "finapi":
+        abort(404)
+    try:
+        url, fid = finapi.formular_verbinden(k)
+    except finapi.FinapiFehler as e:
+        flash(str(e), "fehler")
+        return redirect("/bank")
+    db.ex("UPDATE konto SET finapi_formular = ? WHERE id = ?", (fid, kid))
+    return redirect(url)
+
+
+@bp.post("/bank/konto/<int:kid>/finapi/weiter")
+def finapi_weiter(kid):
+    """Nach dem finAPI-Formular: Bankverbindung übernehmen bzw. Abruf fortsetzen."""
+    k = db.q("SELECT * FROM konto WHERE id = ?", (kid,), one=True)
+    if not k or not k["finapi_formular"]:
+        abort(404)
+    try:
+        status, verbindung = finapi.formular_ergebnis(k["finapi_formular"])
+        if status != "COMPLETED":
+            flash(f"Das finAPI-Formular ist noch nicht abgeschlossen (Stand: {status}).", "fehler")
+            return redirect("/bank")
+        if verbindung and not k["finapi_konto"]:
+            konto_id = finapi.konto_zuordnen(k, verbindung)
+            db.ex("UPDATE konto SET finapi_verbindung = ?, finapi_konto = ? WHERE id = ?", (str(verbindung), konto_id, kid))
+        db.ex("UPDATE konto SET finapi_formular = '' WHERE id = ?", (kid,))
+    except finapi.FinapiFehler as e:
+        flash(str(e), "fehler")
+        return redirect("/bank")
+    return _finapi_abruf(db.q("SELECT * FROM konto WHERE id = ?", (kid,), one=True))
 
 
 # ------------------------------------------------------------------ SEPA-Lastschrift

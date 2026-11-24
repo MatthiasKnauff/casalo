@@ -151,6 +151,11 @@ def einstellungen():
                     flash("DATEV-Angaben nur als Ziffern.", "fehler")
                     return redirect("/einstellungen")
                 db.set_setting(k, f(k))
+        elif bereich == "finapi":
+            db.set_setting("finapi_umgebung", "live" if f("finapi_umgebung") == "live" else "sandbox")
+            db.set_setting("finapi_client_id", f("finapi_client_id"))
+            if request.form.get("finapi_client_secret"):
+                db.set_setting("finapi_client_secret", db.encrypt(request.form["finapi_client_secret"]))
         elif bereich == "portal":
             db.set_setting("portal_aktiv", "1" if request.form.get("portal_aktiv") else "0")
             db.set_setting("portal_belege", "1" if request.form.get("portal_belege") else "0")
@@ -178,6 +183,8 @@ def einstellungen():
     werte = {k: db.setting(k) for k in ("verwaltung_name", "verwaltung_anschrift", "fints_produkt_id", "smtp_host",
                                         "smtp_port", "smtp_user", "smtp_absender")}
     werte["smtp_pass_gesetzt"] = bool(db.setting("smtp_pass"))
+    werte |= {"finapi_umgebung": db.setting("finapi_umgebung"), "finapi_client_id": db.setting("finapi_client_id"),
+              "finapi_secret_gesetzt": bool(db.setting("finapi_client_secret")), "finapi_user": db.setting("finapi_user")}
     werte |= {k: db.setting(k) for k in ("datev_berater", "datev_mandant", "datev_erloes_hausgeld", "datev_erloes_umlage", "datev_konto_sonstig", "datev_kosten_standard") + ("portal_aktiv", "portal_belege")}
     return render_template("einstellungen.html", w=werte, benutzerliste=db.q("SELECT * FROM benutzer ORDER BY name"))
 

@@ -48,7 +48,10 @@ Erster Aufruf: Sie legen sich als Administrator an (Name, E-Mail, Passwort).
 - **Direkt in der Tabelle bearbeiten:** Feld anklicken, Enter speichert, Esc verwirft, Tab springt zum nächsten Feld.
   Geprüft wird auf dem Server (z. B. IBAN, doppelte Nummern, Lastschrift nur mit Mandat).
 - **Rückgängig / Wiederholen:** oben rechts ↶ ↷ oder Strg+Z / Strg+Y, die Zahl daneben zeigt den Verlauf.
-- **Details rechts:** Zeile anklicken – Einheit, Eigentümer, Konto, Vorgang oder Anruf erscheinen rechts, auch dort bearbeitbar.
+- **Details rechts:** Zeile anklicken – Einheit, Eigentümer, Konto, Vorgang, Auftrag … erscheinen rechts, auch dort bearbeitbar.
+  Breite am linken Rand des Bereichs ziehen (Doppelklick: Standard). ⧉ macht daraus ein freies Fenster über der Seite
+  (an der Kopfzeile verschieben, an der Ecke ziehen), ⇲ dockt wieder an. ⇱ legt die Details in ein eigenes Browserfenster,
+  z. B. auf den zweiten Bildschirm – Klicks im Hauptfenster landen dann dort. Alles bleibt im Browser gemerkt.
 - **Tabellen:** Spaltenkopf anklicken sortiert, rechte Maustaste auf den Kopf (oder ☰) blendet Spalten ein/aus und ordnet sie,
   rechte Maustaste auf eine Zeile öffnet das Kontextmenü. Ab acht Zeilen gibt es ein Suchfeld.
 - **Assistent:** Gemeinschaften → „Mit dem Assistenten einrichten“: Gemeinschaft, Einheiten (auch als Serie, MEA aus der
@@ -127,8 +130,11 @@ Windows-1252). Vor dem ersten Import mit dem Steuerberater einen Probelauf mache
   „Freigegeben – weiter“). Danach ruft Casalo jeden Morgen selbst ab.
   Nötig ist eine **FinTS-Produkt-ID** – kostenlos bei der Deutschen Kreditwirtschaft registrieren.
 - **Datei-Import**: Kontoauszug als CAMT.053 (XML) oder CSV-Export der Bank hochladen. Doppelte werden erkannt.
-- **finAPI** für Banken ohne FinTS: als Zugang wählbar, die Anbindung folgt in einer der nächsten Versionen –
-  bis dahin diese Konten per Datei einlesen.
+- **finAPI** für Banken ohne FinTS: Zugang bei finAPI beantragen (Access + Web Form 2.0), Client-ID und -Secret unter
+  Einstellungen → finAPI eintragen (erst Sandbox, dann Live). Beim Konto „Abruf: finAPI“ wählen, unter Bank „Mit finAPI
+  verbinden“: Das Formular von finAPI öffnet sich, dort bei der Bank anmelden (Casalo sieht die Zugangsdaten nicht), dann in
+  Casalo „Freigegeben – weiter“. Casalo sucht das Konto mit derselben IBAN und ruft ab da jeden Morgen selbst ab.
+  Verlangt die Bank eine neue Freigabe (spätestens nach 90 Tagen), erscheint wieder „Freigegeben – weiter“.
 - Zuordnung: Eingänge über IBAN, Name, Wohnungsnummer im Verwendungszweck und Betrag; Ausgänge über frühere
   Buchungen und Stichworte der Kostenarten. „Sicher“ wird sofort gebucht, der Rest steht unter „Zu prüfen“.
 - **Lastschrift**: Gemeinschaft → Lastschrift → SEPA-Datei (pain.008) erzeugen und im Onlinebanking hochladen.

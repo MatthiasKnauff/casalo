@@ -35,6 +35,16 @@
   </div>
   <p class="hinweis">Sachkonten je Kostenart und Bankkonto trägt man bei der Gemeinschaft ein (Konten, Kostenarten). Kontenrahmen und Nummern mit dem Steuerberater abstimmen.</p>
   <p><button class="zweit">Speichern</button></p></form>
+<form method="post" class="karte"><input type="hidden" name="bereich" value="finapi">
+  <h2>finAPI (Banken ohne FinTS)</h2>
+  <div class="felder">
+    <div><label>Umgebung</label><select name="finapi_umgebung"><option value="sandbox" {{ 'selected' if w.finapi_umgebung != 'live' }}>Sandbox (Test)</option><option value="live" {{ 'selected' if w.finapi_umgebung == 'live' }}>Live</option></select></div>
+    <div><label>Client-ID</label><input name="finapi_client_id" value="{{ w.finapi_client_id }}" autocomplete="off"></div>
+    <div><label>Client-Secret {{ '(gespeichert)' if w.finapi_secret_gesetzt }}</label><input name="finapi_client_secret" type="password" autocomplete="new-password" placeholder="{{ 'unverändert lassen' if w.finapi_secret_gesetzt else '' }}"></div>
+  </div>
+  <p class="hinweis">Zugang bei finAPI beantragen (Access + Web Form 2.0). Casalo legt bei finAPI einen eigenen Nutzer an{% if w.finapi_user %} ({{ w.finapi_user }}){% endif %};
+  die Bankzugangsdaten geben Sie nur im Formular von finAPI ein. Danach beim Konto „Abruf: finAPI“ wählen und unter Bank „Mit finAPI verbinden“.</p>
+  <p><button class="zweit">Speichern</button></p></form>
 <form method="post" class="karte"><input type="hidden" name="bereich" value="portal">
   <h2>Eigentümerportal</h2>
   <label class="haken"><input type="checkbox" name="portal_aktiv" value="1" {{ 'checked' if w.portal_aktiv == '1' }}> Eigentümer können sich mit ihrer E-Mail-Adresse anmelden (Link per E-Mail, kein Passwort)</label>
